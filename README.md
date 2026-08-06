@@ -115,6 +115,24 @@ episode; `expert_demo_opening_moves` and `expert_demo_opening_weight` control
 the weight of that prefix. These controls are game-independent, and held-out
 `test_human` policies are rejected from expert replay.
 
+Complete expert-versus-expert games use the same optimizer through a compact,
+game-independent trajectory interface. A trajectory contains only the reset
+seed and canonical action sequence; the trainer reconstructs observations,
+legal masks, player-relative terminal values, replay weights, and budgets:
+
+```python
+from rlbench.algorithms.alphazero import ExpertTrajectory
+
+trainer.distill_expert_trajectories(
+    game_factory,
+    [ExpertTrajectory(seed=101, actions=(0, 3, 1, 4, 2))],
+    training_steps=8192,
+    fresh_replay=True,
+    opening_moves=8,
+    opening_weight=4.0,
+)
+```
+
 ## Build SnakeGo human populations
 
 Committed population files are external-data blueprints. They contain stable

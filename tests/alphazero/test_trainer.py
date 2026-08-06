@@ -14,6 +14,7 @@ import torch
 from rlbench.algorithms.alphazero import (
     AlphaZeroConfig,
     AlphaZeroTrainer,
+    ExpertTrajectory,
     PolicyValueNet,
     ReplayBuffer,
     ReplaySample,
@@ -95,6 +96,76 @@ def test_optimizer_continuation_checks_deadline_before_next_step() -> None:
         )
 
     assert trainer.optimizer_steps == 0
+
+
+def test_complete_expert_trajectories_use_generic_replay_and_budget_path(
+    tmp_path,
+) -> None:
+    ledger = EventLedger(tmp_path / "trajectory-events.jsonl")
+    trainer = _trainer(TicTacToe(), learning_rate=0.02, ledger=ledger)
+    winning_game = (0, 3, 1, 4, 2)
+
+    result = trainer.distill_expert_trajectories(
+        TicTacToe,
+        (
+            ExpertTrajectory(seed=101, actions=winning_game),
+            ExpertTrajectory(seed=102, actions=winning_game),
+        ),
+        training_steps=2,
+        fresh_replay=True,
+        base_weight=2.0,
+        opening_moves=1,
+        opening_weight=5.0,
+    )
+
+    samples = tuple(trainer.replay._samples)
+    assert result.generation == 1
+    assert result.episodes == 2
+    assert result.replay_samples == 10
+    assert result.optimizer_steps == 2
+    assert trainer.budgets.learning.episodes == 2
+    assert trainer.budgets.learning.env_steps == 10
+    assert {sample.source for sample in samples} == {"expert_demo"}
+    assert [sample.outcome for sample in samples[:5]] == [
+        1.0,
+        -1.0,
+        1.0,
+        -1.0,
+        1.0,
+    ]
+    assert [sample.decision_index for sample in samples[:5]] == [0, 0, 1, 1, 2]
+    assert [sample.sample_weight for sample in samples[:5]] == [
+        5.0,
+        5.0,
+        2.0,
+        2.0,
+        2.0,
+    ]
+    event = next(
+        event
+        for event in ledger.read()
+        if event.event_type == "alphazero_expert_distillation"
+    )
+    assert event.payload["expert_samples"] == 10
+    assert event.payload["completed_optimizer_steps"] == 2
+
+
+def test_expert_trajectory_requires_a_complete_legal_game() -> None:
+    trainer = _trainer(TicTacToe(), learning_rate=0.02)
+
+    with pytest.raises(ValueError, match="terminal state"):
+        trainer.distill_expert_trajectories(
+            TicTacToe,
+            (ExpertTrajectory(seed=1, actions=(0, 3)),),
+            training_steps=0,
+        )
+
+    with pytest.raises(ValueError, match="illegal action"):
+        trainer.distill_expert_trajectories(
+            TicTacToe,
+            (ExpertTrajectory(seed=1, actions=(0, 0, 1, 4, 2)),),
+            training_steps=0,
+        )
 
 
 def test_checkpoint_restores_identical_logits_rng_and_counters(tmp_path) -> None:

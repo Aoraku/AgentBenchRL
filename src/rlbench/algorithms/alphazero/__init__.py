@@ -12,6 +12,7 @@ from .selfplay import (
 )
 from .trainer import (
     AlphaZeroTrainer,
+    ExpertTrajectory,
     GenerationMetrics,
     TrainingMetrics,
 )
@@ -20,6 +21,7 @@ __all__ = [
     "AlphaZeroConfig",
     "AlphaZeroTrainer",
     "BatchEvaluator",
+    "ExpertTrajectory",
     "GenerationMetrics",
     "MCTS",
     "PolicyValueNet",

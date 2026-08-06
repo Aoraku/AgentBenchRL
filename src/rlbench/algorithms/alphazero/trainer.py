@@ -6,7 +6,7 @@ import copy
 import math
 import random
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -21,7 +21,7 @@ from rlbench.telemetry import BudgetCounters, Event, EventLedger
 
 from .config import AlphaZeroConfig
 from .network import PolicyValueNet
-from .replay import ReplayBatch, ReplayBuffer
+from .replay import ReplayBatch, ReplayBuffer, ReplaySample
 from .selfplay import SelfPlayWorker
 
 
@@ -40,6 +40,29 @@ class GenerationMetrics:
     replay_samples: int
     optimizer_steps: int
     evaluation: Mapping[str, Any] | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ExpertTrajectory:
+    """One complete expert game represented by its deterministic seed and actions."""
+
+    seed: int
+    actions: tuple[int, ...]
+
+    def __post_init__(self) -> None:
+        if (
+            isinstance(self.seed, bool)
+            or not isinstance(self.seed, int)
+            or self.seed < 0
+        ):
+            raise ValueError("expert trajectory seed must be a non-negative integer")
+        if not self.actions:
+            raise ValueError("expert trajectory actions must be non-empty")
+        if any(
+            isinstance(action, bool) or not isinstance(action, int)
+            for action in self.actions
+        ):
+            raise ValueError("expert trajectory actions must be integers")
 
 
 LeagueEvaluation = Callable[
@@ -320,6 +343,93 @@ class AlphaZeroTrainer:
             )
         return tuple(completed)
 
+    def distill_expert_trajectories(
+        self,
+        game_factory: Callable[[], Any],
+        trajectories: Sequence[ExpertTrajectory],
+        *,
+        training_steps: int,
+        fresh_replay: bool = False,
+        base_weight: float = 1.0,
+        opening_moves: int = 0,
+        opening_weight: float = 1.0,
+        max_decisions_per_player: int | None = None,
+        deadline_monotonic: float | None = None,
+    ) -> GenerationMetrics:
+        """Fit complete expert games without coupling imitation to one game plugin."""
+        _require_allocation_time(deadline_monotonic)
+        episodes = tuple(trajectories)
+        if not episodes:
+            raise ValueError("expert distillation requires at least one trajectory")
+        _validate_expert_distillation_controls(
+            base_weight=base_weight,
+            opening_moves=opening_moves,
+            opening_weight=opening_weight,
+            max_decisions_per_player=max_decisions_per_player,
+        )
+        if fresh_replay:
+            self.replay = ReplayBuffer(
+                self.config.replay_capacity,
+                seed=int(self.rng.integers(0, 2**31)),
+            )
+
+        sample_count = 0
+        env_steps = 0
+        for trajectory in episodes:
+            _require_allocation_time(deadline_monotonic)
+            samples, steps = _replay_expert_trajectory(
+                game_factory,
+                trajectory,
+                base_weight=float(base_weight),
+                opening_moves=opening_moves,
+                opening_weight=float(opening_weight),
+                max_decisions_per_player=max_decisions_per_player,
+            )
+            self.replay.extend(samples)
+            sample_count += len(samples)
+            env_steps += steps
+            self.budgets.learning.episodes += 1
+            self.budgets.learning.env_steps += steps
+
+        completed = self.run_optimizer_steps(
+            training_steps,
+            deadline_monotonic=deadline_monotonic,
+        )
+        self.generation += 1
+        if self.ledger is not None:
+            self.ledger.append(
+                Event(
+                    event_type="alphazero_expert_distillation",
+                    run_id=self.run_id,
+                    stage="learning",
+                    payload={
+                        "generation": self.generation,
+                        "episodes": len(episodes),
+                        "env_steps": env_steps,
+                        "expert_samples": sample_count,
+                        "fresh_replay": fresh_replay,
+                        "base_weight": float(base_weight),
+                        "opening_moves": opening_moves,
+                        "opening_weight": float(opening_weight),
+                        "max_decisions_per_player": max_decisions_per_player,
+                        "requested_optimizer_steps": training_steps,
+                        "completed_optimizer_steps": len(completed),
+                    },
+                )
+            )
+            self.ledger.append_budget_snapshot(
+                run_id=self.run_id,
+                counters=self.budgets,
+            )
+        evaluation = self.evaluate_league()
+        return GenerationMetrics(
+            generation=self.generation,
+            episodes=len(episodes),
+            replay_samples=sample_count,
+            optimizer_steps=self.optimizer_steps,
+            evaluation=evaluation,
+        )
+
     def evaluate_league(self) -> Mapping[str, Any] | None:
         if self.league is None or self.evaluation_callback is None:
             return None
@@ -496,6 +606,98 @@ class AlphaZeroTrainer:
         policy_loss = (policy_losses * sample_weights).sum() / weight_total
         value_loss = (value_losses * sample_weights).sum() / weight_total
         return policy_loss + value_loss, policy_loss, value_loss
+
+
+def _validate_expert_distillation_controls(
+    *,
+    base_weight: float,
+    opening_moves: int,
+    opening_weight: float,
+    max_decisions_per_player: int | None,
+) -> None:
+    for name, value in (
+        ("base_weight", base_weight),
+        ("opening_weight", opening_weight),
+    ):
+        if (
+            not isinstance(value, (int, float))
+            or isinstance(value, bool)
+            or not math.isfinite(value)
+            or value <= 0.0
+        ):
+            raise ValueError(f"{name} must be finite and positive")
+    if (
+        isinstance(opening_moves, bool)
+        or not isinstance(opening_moves, int)
+        or opening_moves < 0
+    ):
+        raise ValueError("opening_moves must be a non-negative integer")
+    if max_decisions_per_player is not None and (
+        isinstance(max_decisions_per_player, bool)
+        or not isinstance(max_decisions_per_player, int)
+        or max_decisions_per_player < 0
+    ):
+        raise ValueError("max_decisions_per_player must be non-negative or None")
+
+
+def _replay_expert_trajectory(
+    game_factory: Callable[[], Any],
+    trajectory: ExpertTrajectory,
+    *,
+    base_weight: float,
+    opening_moves: int,
+    opening_weight: float,
+    max_decisions_per_player: int | None,
+) -> tuple[list[ReplaySample], int]:
+    if not isinstance(trajectory, ExpertTrajectory):
+        raise TypeError("expert trajectories must be ExpertTrajectory values")
+    game = game_factory()
+    game.reset(trajectory.seed)
+    pending: list[tuple[Any, Any, int, int, int]] = []
+    player_decisions = [0, 0]
+    for action in trajectory.actions:
+        if game.outcome(game.current_player()) is not None:
+            raise ValueError("expert trajectory contains actions after termination")
+        player = game.current_player()
+        observation = game.observe(player)
+        legal_mask = np.asarray(game.legal_action_mask(), dtype=np.bool_)
+        if action < 0 or action >= len(legal_mask) or not bool(legal_mask[action]):
+            raise ValueError("expert trajectory contains an illegal action")
+        decision_index = player_decisions[player]
+        if (
+            max_decisions_per_player is None
+            or decision_index < max_decisions_per_player
+        ):
+            pending.append(
+                (observation, legal_mask, action, player, decision_index)
+            )
+        player_decisions[player] += 1
+        game.step(action)
+
+    outcomes = (game.outcome(0), game.outcome(1))
+    if outcomes[0] is None or outcomes[1] is None:
+        raise ValueError("expert trajectory must reach a terminal state")
+    samples: list[ReplaySample] = []
+    for observation, legal_mask, action, player, decision_index in pending:
+        target = np.zeros(len(legal_mask), dtype=np.float32)
+        target[action] = 1.0
+        samples.append(
+            ReplaySample(
+                observation=observation,
+                legal_mask=legal_mask,
+                visit_policy=target,
+                outcome=float(outcomes[player]),
+                player=player,
+                source="expert_demo",
+                sample_weight=(
+                    opening_weight
+                    if decision_index < opening_moves
+                    else base_weight
+                ),
+                decision_index=decision_index,
+            )
+        )
+    return samples, len(trajectory.actions)
 
 
 def _restore_budgets(raw: Any) -> BudgetCounters:
