@@ -41,7 +41,10 @@ def test_release_metadata_declares_an_installable_mit_project() -> None:
     assert project["license"] == "MIT"
     assert project["license-files"] == ["LICENSE", "LICENSES/*.txt"]
     assert project["authors"]
-    assert project["scripts"] == {"rlbench": "rlbench.cli.main:main"}
+    assert project["scripts"] == {
+        "rlbench": "rlbench.cli.main:main",
+        "snakego-export-policy": "games.snakego.export_policy:main",
+    }
     assert project["urls"] == {
         "Homepage": "https://github.com/Aoraku/AgentBenchRL",
         "Repository": "https://github.com/Aoraku/AgentBenchRL.git",

@@ -203,8 +203,26 @@ rlbench report runs/snakego-az
 
 ## Official SnakeGo submission wrapper
 
-An AlphaZero checkpoint can serve the competition stdin/stdout binary protocol
-directly. Network dimensions must match the training configuration.
+A compact inference bundle omits replay, optimizer, trainer, and RNG state while
+embedding the exact network configuration and SnakeGo observation schema:
+
+```bash
+snakego-export-policy \
+  --checkpoint runs/snakego-az/checkpoints/checkpoint_000200.pt \
+  --output submissions/snakego/policy.pt \
+  --channels 128 \
+  --residual-blocks 8 \
+  --simulations 256
+
+python -m games.snakego \
+  --bundle submissions/snakego/policy.pt \
+  --device cpu \
+  --seed 0
+```
+
+A complete AlphaZero training checkpoint can also serve the competition
+stdin/stdout binary protocol directly. Network dimensions must match the
+training configuration.
 
 ```bash
 python -m games.snakego \

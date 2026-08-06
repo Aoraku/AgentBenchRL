@@ -34,6 +34,7 @@ dependencies = [
 
 [project.scripts]
 rlbench = "rlbench.cli.main:main"
+snakego-export-policy = "games.snakego.export_policy:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]

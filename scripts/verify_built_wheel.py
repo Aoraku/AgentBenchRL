@@ -99,6 +99,11 @@ def verify_wheel(wheel: Path, sdist: Path, python: Path) -> dict[str, object]:
         cli = environment / (
             "Scripts/rlbench.exe" if sys.platform == "win32" else "bin/rlbench"
         )
+        exporter = environment / (
+            "Scripts/snakego-export-policy.exe"
+            if sys.platform == "win32"
+            else "bin/snakego-export-policy"
+        )
         _run(
             [
                 str(executable),
@@ -126,6 +131,9 @@ def verify_wheel(wheel: Path, sdist: Path, python: Path) -> dict[str, object]:
         metadata = json.loads(probe.stdout)
         if not cli.is_file():
             raise RuntimeError("wheel did not install the rlbench console entry")
+        if not exporter.is_file():
+            raise RuntimeError("wheel did not install the SnakeGo exporter entry")
+        _run([str(exporter), "--help"], cwd=root)
         validation = json.loads(
             _run([str(cli), "validate-game", "snakego", "--seed", "7"], cwd=root).stdout
         )

@@ -21,6 +21,8 @@ from games.snakego import (
     SnakeGoState,
     SnakeState,
     canonical_action,
+    export_alphazero_inference_bundle,
+    load_alphazero_inference_bundle,
     load_alphazero_policy,
 )
 from rlbench.algorithms.alphazero import (
@@ -506,6 +508,57 @@ def test_public_loader_restores_a_real_alphazero_checkpoint_deterministically(
     assert bool(game.legal_action_mask()[first.action]) is True
 
 
+def test_compact_inference_bundle_embeds_network_config_and_game_schema(
+    tmp_path: Path,
+) -> None:
+    checkpoint = tmp_path / "snakego-training.pt"
+    bundle = tmp_path / "snakego-inference.pt"
+    config, expected_state = _save_real_alphazero_checkpoint(checkpoint)
+
+    exported = export_alphazero_inference_bundle(
+        checkpoint,
+        bundle,
+        config=config,
+    )
+    payload = torch.load(exported, map_location="cpu", weights_only=False)
+    policy = load_alphazero_inference_bundle(
+        bundle,
+        simulations=2,
+        seed=11,
+    )
+
+    assert set(payload) == {
+        "format",
+        "schema_version",
+        "game_spec",
+        "config",
+        "model_state",
+    }
+    assert payload["config"]["channels"] == config.channels
+    assert payload["config"]["residual_blocks"] == config.residual_blocks
+    assert tuple(payload["game_spec"]["plane_names"]) == PLANE_NAMES
+    restored_state = policy.evaluator.state_dict()
+    assert all(
+        torch.equal(restored_state[name], expected_state[name])
+        for name in expected_state
+    )
+
+
+def test_inference_bundle_rejects_an_observation_schema_mismatch(
+    tmp_path: Path,
+) -> None:
+    checkpoint = tmp_path / "snakego-training.pt"
+    bundle = tmp_path / "snakego-inference.pt"
+    config, _ = _save_real_alphazero_checkpoint(checkpoint)
+    export_alphazero_inference_bundle(checkpoint, bundle, config=config)
+    payload = torch.load(bundle, map_location="cpu", weights_only=False)
+    payload["game_spec"]["plane_names"] = ("wrong",)
+    torch.save(payload, bundle)
+
+    with pytest.raises(ValueError, match="game schema"):
+        load_alphazero_inference_bundle(bundle)
+
+
 def test_module_agent_loads_checkpoint_and_processes_one_raw_byte_stream(
     tmp_path: Path,
 ) -> None:
@@ -538,6 +591,47 @@ def test_module_agent_loads_checkpoint_and_processes_one_raw_byte_stream(
             "1",
             "--inference-batch-size",
             "1",
+        ],
+        input=raw_input,
+        capture_output=True,
+        check=False,
+        timeout=30,
+        env=environment,
+    )
+
+    assert completed.returncode == 0, completed.stderr.decode(errors="replace")
+    assert len(completed.stdout) == 5
+    assert completed.stdout[:4] == b"\x00\x00\x00\x01"
+    assert 1 <= completed.stdout[4] <= 6
+
+
+def test_module_agent_loads_compact_bundle_without_network_arguments(
+    tmp_path: Path,
+) -> None:
+    checkpoint = tmp_path / "snakego-process.pt"
+    bundle = tmp_path / "snakego-process-inference.pt"
+    config, _ = _save_real_alphazero_checkpoint(checkpoint)
+    export_alphazero_inference_bundle(checkpoint, bundle, config=config)
+    raw_input = (
+        _official_config(player=0)
+        + _official_items([(8, 8, 0, 4, 2)])
+        + b"\x11\x00\x00\x00\x02\x00\x02"
+    )
+    environment = os.environ.copy()
+    source_root = str(Path(__file__).parents[2] / "src")
+    environment["PYTHONPATH"] = os.pathsep.join(
+        filter(None, (source_root, environment.get("PYTHONPATH", "")))
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "games.snakego",
+            "--bundle",
+            str(bundle),
+            "--simulations",
+            "2",
         ],
         input=raw_input,
         capture_output=True,

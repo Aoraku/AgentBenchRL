@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
-from dataclasses import dataclass
+import tempfile
+from collections.abc import Mapping
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, BinaryIO, Sequence
 
@@ -17,6 +20,10 @@ from .state import ItemState
 
 if TYPE_CHECKING:
     from rlbench.algorithms.alphazero import AlphaZeroConfig, MCTS
+
+
+INFERENCE_BUNDLE_FORMAT = "agentbench-rl-frame-alphazero-inference"
+INFERENCE_BUNDLE_SCHEMA_VERSION = 1
 
 
 @dataclass(frozen=True, slots=True)
@@ -176,6 +183,138 @@ def load_alphazero_policy(
     return MCTS(config, network, seed=seed)
 
 
+def export_alphazero_inference_bundle(
+    checkpoint_path: str | Path,
+    output_path: str | Path,
+    *,
+    config: AlphaZeroConfig,
+) -> Path:
+    """Strip optimizer, replay, trainer, and RNG state from a SnakeGo checkpoint."""
+    import torch
+
+    from rlbench.algorithms import PolicyCheckpoint
+    from rlbench.algorithms.alphazero import PolicyValueNet
+
+    network = PolicyValueNet.from_game_spec(SNAKEGO_SPEC, config, device="cpu")
+    PolicyCheckpoint.load(checkpoint_path, map_location="cpu").restore(model=network)
+    inference_config = replace(
+        config,
+        root_dirichlet_fraction=0.0,
+        self_play_temperature=0.0,
+        temperature_moves=0,
+        mixed_precision=False,
+        device="cpu",
+    )
+    payload = {
+        "format": INFERENCE_BUNDLE_FORMAT,
+        "schema_version": INFERENCE_BUNDLE_SCHEMA_VERSION,
+        "game_spec": {
+            "name": SNAKEGO_SPEC.name,
+            "action_names": SNAKEGO_SPEC.action_names,
+            "plane_names": SNAKEGO_SPEC.observation_spec.plane_names,
+            "scalar_names": SNAKEGO_SPEC.observation_spec.scalar_names,
+        },
+        "config": asdict(inference_config),
+        "model_state": {
+            name: tensor.detach().cpu()
+            for name, tensor in network.state_dict().items()
+        },
+    }
+    destination = Path(output_path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        dir=destination.parent,
+        prefix=f".{destination.name}.",
+        suffix=".tmp",
+    )
+    os.close(descriptor)
+    try:
+        torch.save(payload, temporary_name)
+        with open(temporary_name, "rb") as stream:
+            os.fsync(stream.fileno())
+        os.replace(temporary_name, destination)
+    except BaseException:
+        try:
+            os.unlink(temporary_name)
+        except FileNotFoundError:
+            pass
+        raise
+    return destination
+
+
+def load_alphazero_inference_bundle(
+    bundle_path: str | Path,
+    *,
+    device: str = "cpu",
+    seed: int = 0,
+    simulations: int | None = None,
+    c_puct: float | None = None,
+    inference_batch_size: int | None = None,
+) -> MCTS:
+    """Restore a compact, schema-bound SnakeGo inference bundle."""
+    import torch
+
+    from rlbench.algorithms.alphazero import AlphaZeroConfig, MCTS, PolicyValueNet
+
+    try:
+        payload = torch.load(bundle_path, map_location="cpu", weights_only=False)
+    except Exception as exc:
+        raise ValueError(f"invalid inference bundle: {bundle_path}") from exc
+    if not isinstance(payload, Mapping):
+        raise ValueError("inference bundle must contain a mapping")
+    if payload.get("format") != INFERENCE_BUNDLE_FORMAT:
+        raise ValueError("unsupported inference bundle format")
+    if payload.get("schema_version") != INFERENCE_BUNDLE_SCHEMA_VERSION:
+        raise ValueError("unsupported inference bundle schema version")
+    _validate_inference_game_spec(payload.get("game_spec"))
+    raw_config = payload.get("config")
+    model_state = payload.get("model_state")
+    if not isinstance(raw_config, Mapping) or not isinstance(model_state, Mapping):
+        raise ValueError("inference bundle is missing config or model state")
+    embedded = AlphaZeroConfig(**dict(raw_config))
+    config = replace(
+        embedded,
+        simulations=embedded.simulations if simulations is None else simulations,
+        c_puct=embedded.c_puct if c_puct is None else c_puct,
+        inference_batch_size=(
+            embedded.inference_batch_size
+            if inference_batch_size is None
+            else inference_batch_size
+        ),
+        root_dirichlet_fraction=0.0,
+        self_play_temperature=0.0,
+        temperature_moves=0,
+        mixed_precision=False,
+        device=device,
+    )
+    network = PolicyValueNet.from_game_spec(SNAKEGO_SPEC, config, device=device)
+    try:
+        network.load_state_dict(dict(model_state), strict=True)
+    except Exception as exc:
+        raise ValueError("inference bundle model state does not match its schema") from exc
+    network.eval()
+    return MCTS(config, network, seed=seed)
+
+
+def _validate_inference_game_spec(raw: object) -> None:
+    if not isinstance(raw, Mapping):
+        raise ValueError("inference bundle has no game schema")
+    expected = {
+        "name": SNAKEGO_SPEC.name,
+        "action_names": tuple(SNAKEGO_SPEC.action_names),
+        "plane_names": tuple(SNAKEGO_SPEC.observation_spec.plane_names),
+        "scalar_names": tuple(SNAKEGO_SPEC.observation_spec.scalar_names),
+    }
+    actual = {
+        "name": raw.get("name"),
+        "action_names": tuple(raw.get("action_names", ())),
+        "plane_names": tuple(raw.get("plane_names", ())),
+        "scalar_names": tuple(raw.get("scalar_names", ())),
+    }
+    if actual != expected:
+        raise ValueError("inference bundle game schema does not match SnakeGo")
+
+
 def run_official_agent(
     policy: Any,
     *,
@@ -230,34 +369,54 @@ def _write_decision(stream: BinaryIO, decision: bytes | None) -> None:
 def main(argv: Sequence[str] | None = None) -> int:
     """Load an AlphaZero checkpoint and serve the official binary protocol."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--checkpoint", required=True, type=Path)
-    parser.add_argument("--simulations", type=int, default=64)
-    parser.add_argument("--c-puct", type=float, default=1.5)
-    parser.add_argument("--channels", type=int, required=True)
-    parser.add_argument("--residual-blocks", type=int, required=True)
-    parser.add_argument("--inference-batch-size", type=int, default=32)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--checkpoint", type=Path)
+    source.add_argument("--bundle", type=Path)
+    parser.add_argument("--simulations", type=int)
+    parser.add_argument("--c-puct", type=float)
+    parser.add_argument("--channels", type=int)
+    parser.add_argument("--residual-blocks", type=int)
+    parser.add_argument("--inference-batch-size", type=int)
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--seed", type=int, default=0)
     arguments = parser.parse_args(argv)
 
     from rlbench.algorithms.alphazero import AlphaZeroConfig
 
-    config = AlphaZeroConfig(
-        simulations=arguments.simulations,
-        c_puct=arguments.c_puct,
-        root_dirichlet_fraction=0.0,
-        self_play_temperature=0.0,
-        temperature_moves=0,
-        channels=arguments.channels,
-        residual_blocks=arguments.residual_blocks,
-        mixed_precision=False,
-        inference_batch_size=arguments.inference_batch_size,
-    )
-    policy = load_alphazero_policy(
-        arguments.checkpoint,
-        config=config,
-        device=arguments.device,
-        seed=arguments.seed,
-    )
+    if arguments.bundle is not None:
+        policy = load_alphazero_inference_bundle(
+            arguments.bundle,
+            device=arguments.device,
+            seed=arguments.seed,
+            simulations=arguments.simulations,
+            c_puct=arguments.c_puct,
+            inference_batch_size=arguments.inference_batch_size,
+        )
+    else:
+        if arguments.channels is None or arguments.residual_blocks is None:
+            parser.error("--checkpoint requires --channels and --residual-blocks")
+        config = AlphaZeroConfig(
+            simulations=(
+                64 if arguments.simulations is None else arguments.simulations
+            ),
+            c_puct=1.5 if arguments.c_puct is None else arguments.c_puct,
+            root_dirichlet_fraction=0.0,
+            self_play_temperature=0.0,
+            temperature_moves=0,
+            channels=arguments.channels,
+            residual_blocks=arguments.residual_blocks,
+            mixed_precision=False,
+            inference_batch_size=(
+                32
+                if arguments.inference_batch_size is None
+                else arguments.inference_batch_size
+            ),
+        )
+        policy = load_alphazero_policy(
+            arguments.checkpoint,
+            config=config,
+            device=arguments.device,
+            seed=arguments.seed,
+        )
     run_official_agent(policy)
     return 0

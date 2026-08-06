@@ -8,8 +8,12 @@ from .engine import (
 )
 from .game import SnakeGoGame
 from .protocol_agent import (
+    INFERENCE_BUNDLE_FORMAT,
+    INFERENCE_BUNDLE_SCHEMA_VERSION,
     OfficialGameOver,
     OfficialProtocolAdapter,
+    export_alphazero_inference_bundle,
+    load_alphazero_inference_bundle,
     load_alphazero_policy,
     run_official_agent,
 )
@@ -25,6 +29,8 @@ from .state import ItemState, SnakeGoState, SnakeState
 __all__ = [
     "EngineTransition",
     "IllegalActionError",
+    "INFERENCE_BUNDLE_FORMAT",
+    "INFERENCE_BUNDLE_SCHEMA_VERSION",
     "ItemState",
     "OfficialGameOver",
     "OfficialProtocolAdapter",
@@ -37,7 +43,9 @@ __all__ = [
     "SnakeGoSymmetry",
     "SnakeState",
     "canonical_action",
+    "export_alphazero_inference_bundle",
     "generate_items",
+    "load_alphazero_inference_bundle",
     "load_alphazero_policy",
     "run_official_agent",
 ]
