@@ -1,0 +1,17 @@
+{
+  "release_tag": "task10-snakego-20260806",
+  "artifacts": [
+    {
+      "name": "checkpoint_000020.pt",
+      "algorithm": "alphazero",
+      "sha256": "816070471a8020a2e9a3dcc8d61be34626fa0d831daaf8af24ff5e51f0f16614",
+      "canonical_config_hash": "96102f41702eeb1c5f1b0ecfd3db431d74e9157554c519b93b7c8ff92c254af7"
+    },
+    {
+      "name": "checkpoint_000006.pt",
+      "algorithm": "ppo",
+      "sha256": "3dc8dba00fa16989a6aa46549501ede3365d2ff299147bdf1cae2a8340fe4d6a",
+      "canonical_config_hash": "14d1da2180bad903578eac02843bd4b3c62822024c0fe82bad6b20a121c8c528"
+    }
+  ]
+}

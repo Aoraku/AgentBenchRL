@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: AgentBenchRLFrame
+type: software
+version: 0.1.0
+date-released: 2026-08-06
+license: MIT
+authors:
+  - family-names: Qingle
+repository-code: "https://github.com/Aoraku/AgentBenchRLFrame"

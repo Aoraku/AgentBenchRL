@@ -1,0 +1,58 @@
+﻿# Local/private configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_dsa
+id_ed25519
+
+# Python caches
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+*.egg-info/
+
+# JavaScript dependencies/build outputs
+node_modules/
+dist/
+build/
+.next/
+.nuxt/
+
+# Native build outputs and local binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.o
+*.obj
+*.class
+*.jar
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Original private/local collection folders should not be copied into this public repo
+00_reports/
+01_backend_sources/
+02_top_algorithms/
+03_private_candidates/
+04_discovery/
+05_archives/
+06_scripts/
+07_metadata/

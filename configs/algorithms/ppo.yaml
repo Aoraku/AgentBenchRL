@@ -1,0 +1,22 @@
+algorithm:
+  learning_rate: 0.0003
+  weight_decay: 0.0
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_epsilon: 0.2
+  value_coefficient: 0.5
+  entropy_coefficient: 0.01
+  max_grad_norm: 0.5
+  hidden_size: 64
+  conv_channels: 32
+  recurrent: false
+  gru_hidden_size: 64
+  vector_envs: 2
+  episodes_per_collect: 8
+  minibatch_size: 64
+  update_repetitions: 4
+  shaping_beta: 0.0
+  score_scale: 1.0
+  snapshot_interval: 1
+  max_snapshots: 8
+  device: cpu

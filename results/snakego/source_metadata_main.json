@@ -1,0 +1,281 @@
+{
+  "7465b516-55ba-4ce0-b178-bf6da6958568": {
+    "candidate_checkpoint_hash": "sha256:816070471a8020a2e9a3dcc8d61be34626fa0d831daaf8af24ff5e51f0f16614",
+    "case_contract": {
+      "game_config": {
+        "max_round": 512
+      },
+      "limits": {
+        "move_seconds": 3.0
+      },
+      "protocol_version": "snakego-official-v1"
+    },
+    "evaluation_split": "heldout",
+    "executable_hashes": {
+      "learner": "sha256:816070471a8020a2e9a3dcc8d61be34626fa0d831daaf8af24ff5e51f0f16614",
+      "snakego-rank01-omegafantasy-ragnarok": "sha256:22463dce353aaacb3469b188e57015f0b5142146fde1b8c6f9bebea2b80b285c",
+      "snakego-rank02-viridian-riverside": "sha256:35ee8f8074b308fce075486134fe84228e3adb876f77d27d57a58e8c09e35c1e",
+      "snakego-rank08-jhdjames37-notasample": "sha256:2dc31aaefc0161ebdb8285768a801770f53f3bd4de5442e6c0d0d5c2cdd7a8cb",
+      "snakego-rank13-swastika-one": "sha256:32bfec1939b28072f7b66a1219cc613be62044970539f541a6a9a2a5b72700b6"
+    },
+    "heldout_used_for_selection": false,
+    "population_hash": "sha256:42afad7285a90effe588910106896de67cd2e729dee7a867b77d44c0ebb478e3",
+    "population_manifest": {
+      "agents": [
+        {
+          "agent_id": "snakego-rank01-omegafantasy-ragnarok",
+          "command": [
+            "snakego-rank01-omegafantasy-ragnarok/agent"
+          ],
+          "content_hash": "sha256:22463dce353aaacb3469b188e57015f0b5142146fde1b8c6f9bebea2b80b285c",
+          "kind": "test_human",
+          "protocol": "snakego_official",
+          "provenance": {
+            "build_input_hash": "sha256:3f726bd6b5a1fda1bb00aaa35620fca9759d75df293187f86ea82b8207e4bfdb",
+            "build_recipe_hash": "sha256:099152d6ee01a54b0708815bbb3e1b8ef078a3d18a325d454b2c4b20593c2ec8",
+            "entity": "诸神之黄昏",
+            "ladder_rank": 1,
+            "ladder_score": 1205,
+            "language": "make",
+            "source_archive": "rank01__omegafantasy__诸神之黄昏__v10.zip",
+            "source_archive_hash": "sha256:7c23c9c087ffade6135abd5f36f61c97ca4f78f5ddf0484bde5cbaf7226aac1a",
+            "source_tree_hash": "sha256:fca690a1a655274fa3e4845fd62b985f4216b55f58de15c7ade0cf0fb6730d5a",
+            "username": "omegafantasy"
+          },
+          "resource_limits": {
+            "move_seconds": 3.0
+          },
+          "roles": [
+            "player_0",
+            "player_1"
+          ]
+        },
+        {
+          "agent_id": "snakego-rank02-viridian-riverside",
+          "command": [
+            "snakego-rank02-viridian-riverside/agent"
+          ],
+          "content_hash": "sha256:35ee8f8074b308fce075486134fe84228e3adb876f77d27d57a58e8c09e35c1e",
+          "kind": "test_human",
+          "protocol": "snakego_official",
+          "provenance": {
+            "build_input_hash": "sha256:d2f8aafe03896fefa45bfbbadfa3564f8f70afc5089ae23921925c2a71c171cc",
+            "build_recipe_hash": "sha256:705cf1695fad734105d1805f75949cff513f5bc0a71bf4e276cc48c72f21bc01",
+            "entity": "在水一方",
+            "ladder_rank": 2,
+            "ladder_score": 1044,
+            "language": "cmake",
+            "source_archive": "rank02__Viridian__在水一方__v1.zip",
+            "source_archive_hash": "sha256:afaed9bc09bee4f2feea84f7bfa0d1c053173fc09565916ddc0a5ea03da76b77",
+            "source_tree_hash": "sha256:7c58bdb7faaae404e662ac139f61ea386e2eb6fb49db12abedf9363087b027f3",
+            "username": "Viridian"
+          },
+          "resource_limits": {
+            "move_seconds": 3.0
+          },
+          "roles": [
+            "player_0",
+            "player_1"
+          ]
+        },
+        {
+          "agent_id": "snakego-rank08-jhdjames37-notasample",
+          "command": [
+            "snakego-rank08-jhdjames37-notasample/agent"
+          ],
+          "content_hash": "sha256:2dc31aaefc0161ebdb8285768a801770f53f3bd4de5442e6c0d0d5c2cdd7a8cb",
+          "kind": "test_human",
+          "protocol": "snakego_official",
+          "provenance": {
+            "build_input_hash": "sha256:d8370d910dae69ab06ccdca83807356ec4d4ff0b95ca28c118f1aed474e43624",
+            "build_recipe_hash": "sha256:1aca28af86f99c706f0a972acb588d53879a7733081cb27610c5b07aa30ab703",
+            "entity": "notASample",
+            "ladder_rank": 8,
+            "ladder_score": 799,
+            "language": "make",
+            "source_archive": "rank08__jhdjames37__notASample__v20.zip",
+            "source_archive_hash": "sha256:5a0a7d514344cd2d2d5fee1c25a864c7ea4fc98798a97727cdeb2879bbe58e09",
+            "source_tree_hash": "sha256:e5564ada605c0c308b89dde589606070cb8f266397d5c9e943a096ac5742e071",
+            "username": "jhdjames37"
+          },
+          "resource_limits": {
+            "move_seconds": 3.0
+          },
+          "roles": [
+            "player_0",
+            "player_1"
+          ]
+        },
+        {
+          "agent_id": "snakego-rank13-swastika-one",
+          "command": [
+            "snakego-rank13-swastika-one/agent"
+          ],
+          "content_hash": "sha256:32bfec1939b28072f7b66a1219cc613be62044970539f541a6a9a2a5b72700b6",
+          "kind": "test_human",
+          "protocol": "snakego_official",
+          "provenance": {
+            "build_input_hash": "sha256:48b8d1a0adf7a261ebf04e27d9136e6dd205e1935bb1ea6907f7c456f3423123",
+            "build_recipe_hash": "sha256:44f04094824c4e4455d8bfb02bac0d2b11ced8a96f69d30e536e550f01f88dd9",
+            "entity": "1",
+            "ladder_rank": 13,
+            "ladder_score": 750,
+            "language": "cmake",
+            "source_archive": "rank13__swastika__1__v61.zip",
+            "source_archive_hash": "sha256:f0242f41cca79a62fdb93077cd786e8530d9391111a3d2330bebd92a7e94116e",
+            "source_tree_hash": "sha256:ab22d738d6990a07d2ca42fa8d3c8fda00f241fe50e917488547ef3b42c3e474",
+            "username": "swastika"
+          },
+          "resource_limits": {
+            "move_seconds": 3.0
+          },
+          "roles": [
+            "player_0",
+            "player_1"
+          ]
+        }
+      ],
+      "population_root": "agents",
+      "protocol_version": "snakego-official-v1",
+      "schema_version": 1
+    }
+  },
+  "ac473310-c5b8-4784-89d4-566e4805d5d5": {
+    "candidate_checkpoint_hash": "sha256:816070471a8020a2e9a3dcc8d61be34626fa0d831daaf8af24ff5e51f0f16614",
+    "case_contract": {
+      "game_config": {
+        "max_round": 512
+      },
+      "limits": {
+        "move_seconds": 3.0
+      },
+      "protocol_version": "snakego-official-v1"
+    },
+    "evaluation_split": "training",
+    "executable_hashes": {
+      "learner": "sha256:816070471a8020a2e9a3dcc8d61be34626fa0d831daaf8af24ff5e51f0f16614",
+      "snakego-rank15-wenjie2002-sampleai": "sha256:4305ddf156dc4909c6ee0dbbdb42d66e01518d1b50ced5c1f27c4216541dcd17"
+    },
+    "heldout_used_for_selection": false,
+    "population_hash": "sha256:5ce2a9a685240302864f13358d6a7fab511e7401d9a686f86c83fc6395b17e74",
+    "population_manifest": {
+      "agents": [
+        {
+          "agent_id": "snakego-rank03-guyan-bob",
+          "command": [
+            "snakego-rank03-guyan-bob/agent"
+          ],
+          "content_hash": "sha256:da36fb6853dfc4f2459b21abf602e2630a5cd7d111160564f5edb2e74cf63d21",
+          "kind": "train_human",
+          "protocol": "snakego_official",
+          "provenance": {
+            "build_input_hash": "sha256:bc216688cd50e9f4b954357c23571e60ff484a53a90445cabeb6f41551cf345d",
+            "build_recipe_hash": "sha256:f4a01505857b8dc03ec989643ced260129048f68e88fc4328e24c2aff8c1547b",
+            "entity": "Bob",
+            "ladder_rank": 3,
+            "ladder_score": 1025,
+            "language": "cpp",
+            "source_archive": "rank03__Guyan__Bob__v11.cpp",
+            "source_archive_hash": "sha256:54901eba4dd4669a5f3adb08e80253e07d584c56e830f6548dc5b80484a73266",
+            "source_tree_hash": "sha256:34d0058cec1fc370c3ef90af43df11d93e63ef9738e63c70edc5fe8ac7c81de1",
+            "username": "Guyan"
+          },
+          "resource_limits": {
+            "move_seconds": 3.0
+          },
+          "roles": [
+            "player_0",
+            "player_1"
+          ]
+        },
+        {
+          "agent_id": "snakego-rank05-ouuan-nauuo",
+          "command": [
+            "snakego-rank05-ouuan-nauuo/agent"
+          ],
+          "content_hash": "sha256:3340fb6c4c7f20c75f3594f9ffc950aa20c28d6926b074880d07a04c79a83df2",
+          "kind": "train_human",
+          "protocol": "snakego_official",
+          "provenance": {
+            "build_input_hash": "sha256:af7dc7f6f23ce52dd224c81f9ca5c8e5b2658b920e82a7dc44681bce1f70acc7",
+            "build_recipe_hash": "sha256:ddf6afd48f78b64b10c650c3fed973854133f90684ce8c6dc705f3c2bba83663",
+            "entity": "Nauuo",
+            "ladder_rank": 5,
+            "ladder_score": 824,
+            "language": "make",
+            "source_archive": "rank05__ouuan__Nauuo__v158.zip",
+            "source_archive_hash": "sha256:a64b4fe97cd5e751c67640c46a7459120c0dfed9617479f927c2ba50f85f4130",
+            "source_tree_hash": "sha256:1e02ade31bfed58aa2bdf50fdb44c79bd300a40ebb1f4d6b5763c75669badf17",
+            "username": "ouuan"
+          },
+          "resource_limits": {
+            "move_seconds": 3.0
+          },
+          "roles": [
+            "player_0",
+            "player_1"
+          ]
+        },
+        {
+          "agent_id": "snakego-rank06-aysn-ai1",
+          "command": [
+            "snakego-rank06-aysn-ai1/agent"
+          ],
+          "content_hash": "sha256:991a717e5b199a484c654a72c299849685bc55b71e6623c67086f162f4fbc070",
+          "kind": "train_human",
+          "protocol": "snakego_official",
+          "provenance": {
+            "build_input_hash": "sha256:a618c0a07d096f9d9bf5ecea2f30e5a6d506af2f6301482fe70482370918cf09",
+            "build_recipe_hash": "sha256:44f04094824c4e4455d8bfb02bac0d2b11ced8a96f69d30e536e550f01f88dd9",
+            "entity": "AI1",
+            "ladder_rank": 6,
+            "ladder_score": 812,
+            "language": "cmake",
+            "source_archive": "rank06__aysn__AI1__v67.zip",
+            "source_archive_hash": "sha256:0619baa0d4678f6e53f90cf15d46bf43b583eebe2c2e1eef64903011e7f9771c",
+            "source_tree_hash": "sha256:1a4570f75745802edf77a94ed91074560a7f3e02699f13e8ee1d81b86106aef7",
+            "username": "aysn"
+          },
+          "resource_limits": {
+            "move_seconds": 3.0
+          },
+          "roles": [
+            "player_0",
+            "player_1"
+          ]
+        },
+        {
+          "agent_id": "snakego-rank15-wenjie2002-sampleai",
+          "command": [
+            "snakego-rank15-wenjie2002-sampleai/agent"
+          ],
+          "content_hash": "sha256:4305ddf156dc4909c6ee0dbbdb42d66e01518d1b50ced5c1f27c4216541dcd17",
+          "kind": "train_human",
+          "protocol": "snakego_official",
+          "provenance": {
+            "build_input_hash": "sha256:0536b759e81b65c2b1a86b3d8c35f3c50cefc579dd78107e288e2ef512f822c2",
+            "build_recipe_hash": "sha256:7e9323b8c69e9936272ca42a2380b0f45ec0a9f15dce3a0076456154730af6c9",
+            "entity": "sampleAI",
+            "ladder_rank": 15,
+            "ladder_score": 687,
+            "language": "make",
+            "source_archive": "rank15__wenjie2002__sampleAI__v1.zip",
+            "source_archive_hash": "sha256:5cb42a0e88bbee4c7121b6955022ded5e2e4670eeb34c8d373b7a7279d8c8a03",
+            "source_tree_hash": "sha256:abb85dfb4c430236ae950b9d69140ba48d82822b88b05df92da3cbf434074a65",
+            "username": "wenjie2002"
+          },
+          "resource_limits": {
+            "move_seconds": 3.0
+          },
+          "roles": [
+            "player_0",
+            "player_1"
+          ]
+        }
+      ],
+      "population_root": "agents",
+      "protocol_version": "snakego-official-v1",
+      "schema_version": 1
+    }
+  }
+}

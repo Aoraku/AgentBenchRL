@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentbench-rl-frame"
+version = "0.1.0"
+description = "Unified reinforcement-learning framework for AgentBench games."
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = "MIT"
+license-files = ["LICENSE", "LICENSES/*.txt"]
+authors = [{ name = "Qingle", email = "lql24@mails.tsinghua.edu.cn" }]
+keywords = ["reinforcement-learning", "benchmark", "alphazero", "ppo", "snakego"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "matplotlib>=3.8",
+    "numpy>=1.26",
+    "nvidia-ml-py>=13.580",
+    "psutil>=5.9",
+    "PyYAML>=6.0",
+    "tianshou==2.0.1",
+    "torch>=2.7,<3",
+]
+
+[project.scripts]
+rlbench = "rlbench.cli.main:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.urls]
+Homepage = "https://github.com/Aoraku/AgentBenchRLFrame"
+Repository = "https://github.com/Aoraku/AgentBenchRLFrame.git"
+Issues = "https://github.com/Aoraku/AgentBenchRLFrame/issues"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["gpu: requires an available CUDA device"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

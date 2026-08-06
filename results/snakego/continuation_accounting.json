@@ -1,0 +1,142 @@
+{
+  "allocated_gpu_count": 1,
+  "baseline": {
+    "checkpoint_hash": "sha256:bed0bbe166e73a7a3ebc2f4aea540bdfbddda07890b38c69801934eeae44aec2",
+    "checkpoint_index": 16,
+    "episodes": 172,
+    "learning_gpu_hours": 0.5745332479924481,
+    "optimizer_steps": 1408,
+    "source_event": {
+      "created_at": "2026-08-06T07:10:50.032467+00:00",
+      "event_id": "02b9f881-bd7f-4911-a8a1-7b59336fbd04",
+      "event_type": "checkpoint_saved",
+      "payload": {
+        "algorithm": "alphazero",
+        "budgets": {
+          "evaluation": {
+            "cpu_core_hours": 0.0,
+            "env_steps": 4,
+            "episodes": 8,
+            "gpu_hours": 0.0,
+            "mcts_simulations": 0,
+            "optimizer_steps": 0,
+            "wall_seconds": 0.9546459885314107
+          },
+          "learning": {
+            "cpu_core_hours": 0.0,
+            "env_steps": 27150,
+            "episodes": 172,
+            "gpu_hours": 0.0,
+            "mcts_simulations": 664192,
+            "optimizer_steps": 1408,
+            "wall_seconds": 2068.319692772813
+          },
+          "total": {
+            "cpu_core_hours": 0.0,
+            "env_steps": 27154,
+            "episodes": 180,
+            "gpu_hours": 0.0,
+            "mcts_simulations": 664192,
+            "optimizer_steps": 1408,
+            "wall_seconds": 2069.2743387613446
+          }
+        },
+        "checkpoint": "checkpoints/checkpoint_000016.pt",
+        "checkpoint_hash": "sha256:bed0bbe166e73a7a3ebc2f4aea540bdfbddda07890b38c69801934eeae44aec2",
+        "checkpoint_index": 16,
+        "env_steps": 27154,
+        "evaluation_gpu_hours": null,
+        "evaluation_wall_seconds": 0.9546459885314107,
+        "expert_demo": true,
+        "expert_demo_opening_moves": 16,
+        "expert_demo_opening_weight": 32.0,
+        "generation": 16,
+        "gpu_hours": 0.5745332479924481,
+        "learning_gpu_hours": 0.5745332479924481,
+        "learning_wall_seconds": 2068.319692772813,
+        "manifest_hash": "sha256:a5ecce55b64ec4c108477b936046dd13232f63538464d8e02c7ff51259506563",
+        "mcts_simulations": 664192,
+        "optimizer_steps": 1408,
+        "training_population_hash": "sha256:5ce2a9a685240302864f13358d6a7fab511e7401d9a686f86c83fc6395b17e74",
+        "wall_seconds": 2069.2743387613446
+      },
+      "run_id": "2777b820-4a50-448b-9bb8-35239624bd54",
+      "schema_version": 1,
+      "stage": "learning"
+    },
+    "source_event_hash": "sha256:b05927ab9d77578d5e9bf264a748276b1d8c91ec125bf8763c7e8f95ce6d855c",
+    "source_event_id": "02b9f881-bd7f-4911-a8a1-7b59336fbd04"
+  },
+  "continuation_gpu_hours": 0.12121974520773315,
+  "final": {
+    "checkpoint_hash": "sha256:816070471a8020a2e9a3dcc8d61be34626fa0d831daaf8af24ff5e51f0f16614",
+    "checkpoint_index": 20,
+    "episodes": 180,
+    "learning_gpu_hours": 0.6957529932001812,
+    "optimizer_steps": 2432,
+    "source_event": {
+      "created_at": "2026-08-06T07:27:46.068872+00:00",
+      "event_id": "bbf0a849-e58d-4d82-8387-a215335ca0cf",
+      "event_type": "checkpoint_saved",
+      "payload": {
+        "algorithm": "alphazero",
+        "budgets": {
+          "evaluation": {
+            "cpu_core_hours": 0.0,
+            "env_steps": 4,
+            "episodes": 8,
+            "gpu_hours": 0.0,
+            "mcts_simulations": 0,
+            "optimizer_steps": 0,
+            "wall_seconds": 0.9546459885314107
+          },
+          "learning": {
+            "cpu_core_hours": 0.0,
+            "env_steps": 40697,
+            "episodes": 180,
+            "gpu_hours": 0.0,
+            "mcts_simulations": 680576,
+            "optimizer_steps": 2432,
+            "wall_seconds": 2504.7107755206525
+          },
+          "total": {
+            "cpu_core_hours": 0.0,
+            "env_steps": 40701,
+            "episodes": 188,
+            "gpu_hours": 0.0,
+            "mcts_simulations": 680576,
+            "optimizer_steps": 2432,
+            "wall_seconds": 2505.665421509184
+          }
+        },
+        "checkpoint": "checkpoints/checkpoint_000020.pt",
+        "checkpoint_hash": "sha256:816070471a8020a2e9a3dcc8d61be34626fa0d831daaf8af24ff5e51f0f16614",
+        "checkpoint_index": 20,
+        "env_steps": 40701,
+        "evaluation_gpu_hours": null,
+        "evaluation_wall_seconds": 0.9546459885314107,
+        "expert_demo": true,
+        "expert_demo_opening_moves": 16,
+        "expert_demo_opening_weight": 32.0,
+        "generation": 20,
+        "gpu_hours": 0.6957529932001812,
+        "learning_gpu_hours": 0.6957529932001812,
+        "learning_wall_seconds": 2504.7107755206525,
+        "manifest_hash": "sha256:a5ecce55b64ec4c108477b936046dd13232f63538464d8e02c7ff51259506563",
+        "mcts_simulations": 680576,
+        "optimizer_steps": 2432,
+        "training_population_hash": "sha256:5ce2a9a685240302864f13358d6a7fab511e7401d9a686f86c83fc6395b17e74",
+        "wall_seconds": 2505.665421509184
+      },
+      "run_id": "2777b820-4a50-448b-9bb8-35239624bd54",
+      "schema_version": 1,
+      "stage": "learning"
+    },
+    "source_event_hash": "sha256:e66b26c8d64566d448e0cad10ee9afa61c61b551cb1b9e7060ddeea146a6e991",
+    "source_event_id": "bbf0a849-e58d-4d82-8387-a215335ca0cf"
+  },
+  "gpu_hour_ceiling": 0.15,
+  "schema_version": 1,
+  "source_ledger_sha256": "sha256:f7c96df676411ea72047aa4fed8279b948c9a1a4a06a96c0a5ca9139f13cb57b",
+  "within_ceiling": true
+}

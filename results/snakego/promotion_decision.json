@@ -1,0 +1,14 @@
+{
+  "candidate_status": "rejected_candidate",
+  "elo_delta": 161.8719815259824,
+  "promoted": false,
+  "protected_scores": {
+    "bootstrap-checkpoint-5": 0.75,
+    "history-checkpoint-10": 0.5,
+    "sample-agent-rank15": 0.0
+  },
+  "reasons": [
+    "win_rate_lower_bound"
+  ],
+  "win_rate_lower_bound": 0.0
+}

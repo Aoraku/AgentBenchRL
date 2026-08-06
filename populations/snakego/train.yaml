@@ -1,0 +1,32 @@
+schema_version: 1
+set: train
+protocol_version: snakego-official-v1
+agents:
+  - agent_id: snakego-rank03-guyan-bob
+    kind: train_human
+    source_archive: snakego/agents/snakego-rank03-guyan-bob/archive
+    source_archive_hash: sha256:54901eba4dd4669a5f3adb08e80253e07d584c56e830f6548dc5b80484a73266
+    source_path: snakego/agents/snakego-rank03-guyan-bob/source/main.cpp
+    source_tree_hash: sha256:34d0058cec1fc370c3ef90af43df11d93e63ef9738e63c70edc5fe8ac7c81de1
+    move_seconds: 3.0
+  - agent_id: snakego-rank05-ouuan-nauuo
+    kind: train_human
+    source_archive: snakego/agents/snakego-rank05-ouuan-nauuo/archive
+    source_archive_hash: sha256:a64b4fe97cd5e751c67640c46a7459120c0dfed9617479f927c2ba50f85f4130
+    source_path: snakego/agents/snakego-rank05-ouuan-nauuo/source
+    source_tree_hash: sha256:1e02ade31bfed58aa2bdf50fdb44c79bd300a40ebb1f4d6b5763c75669badf17
+    move_seconds: 3.0
+  - agent_id: snakego-rank06-aysn-ai1
+    kind: train_human
+    source_archive: snakego/agents/snakego-rank06-aysn-ai1/archive
+    source_archive_hash: sha256:0619baa0d4678f6e53f90cf15d46bf43b583eebe2c2e1eef64903011e7f9771c
+    source_path: snakego/agents/snakego-rank06-aysn-ai1/source
+    source_tree_hash: sha256:1a4570f75745802edf77a94ed91074560a7f3e02699f13e8ee1d81b86106aef7
+    move_seconds: 3.0
+  - agent_id: snakego-rank15-wenjie2002-sampleai
+    kind: train_human
+    source_archive: snakego/agents/snakego-rank15-wenjie2002-sampleai/archive
+    source_archive_hash: sha256:5cb42a0e88bbee4c7121b6955022ded5e2e4670eeb34c8d373b7a7279d8c8a03
+    source_path: snakego/agents/snakego-rank15-wenjie2002-sampleai/source
+    source_tree_hash: sha256:abb85dfb4c430236ae950b9d69140ba48d82822b88b05df92da3cbf434074a65
+    move_seconds: 3.0

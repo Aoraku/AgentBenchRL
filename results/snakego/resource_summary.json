@@ -1,0 +1,34 @@
+{
+  "hardware": {
+    "accelerator": "NVIDIA GeForce RTX 4090",
+    "allocated_accelerators": 1,
+    "accelerator_memory_gib": 24,
+    "architecture": "x86_64",
+    "operating_system": "Linux"
+  },
+  "software": {
+    "python": "3.11.15",
+    "pytorch": "2.8.0",
+    "cuda": "12.8",
+    "tianshou": "2.0.1",
+    "numpy": "2.4.6"
+  },
+  "alphazero_candidate_checkpoint_20": {
+    "learning_gpu_hours": 0.695753,
+    "evaluation_gpu_hours_wall_time_derived": 0.326738,
+    "learning_wall_seconds": 2504.711,
+    "evaluation_wall_seconds": 1176.258,
+    "gpu_utilization_observed_percent": [28, 59],
+    "gpu_memory_observed_gib": 3.36
+  },
+  "ppo_checkpoint_6": {
+    "learning_gpu_hours": 0.011856,
+    "learning_wall_seconds": 42.692
+  },
+  "microbenchmark": {
+    "device": "cpu",
+    "split": "training_microbenchmark",
+    "heldout_used": false,
+    "purpose": "bounded functional and neural-batch throughput sweep"
+  }
+}

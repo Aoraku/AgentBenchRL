@@ -1,0 +1,6 @@
+checkpoint,training_opening_survival,total_training_openings,training_sample_agent_games,training_sample_agent_score,candidate_status
+11,5,8,2,0.0,candidate
+14,5,8,2,0.0,candidate
+16,6,8,2,0.0,candidate
+19,8,8,0,,candidate
+20,8,8,2,0.0,rejected_candidate

@@ -1,0 +1,84 @@
+{
+  "alphazero": {
+    "source": "configs/experiments/snakego_task10_alphazero_locked.yaml",
+    "canonical_config_hash": "sha256:96102f41702eeb1c5f1b0ecfd3db431d74e9157554c519b93b7c8ff92c254af7",
+    "game": {"max_round": 512},
+    "algorithm": {
+      "simulations": 128,
+      "c_puct": 1.75,
+      "root_dirichlet_alpha": 0.3,
+      "root_dirichlet_fraction": 0.25,
+      "self_play_temperature": 1.0,
+      "temperature_moves": 16,
+      "channels": 128,
+      "residual_blocks": 8,
+      "learning_rate": 0.0005,
+      "weight_decay": 0.0001,
+      "batch_size": 512,
+      "replay_capacity": 50000,
+      "min_replay_size": 512,
+      "gradient_clip_norm": 5.0,
+      "mixed_precision": true,
+      "self_play_workers": 1,
+      "inference_batch_size": 128,
+      "device": "auto"
+    },
+    "training": {
+      "seed": 260806,
+      "generations": 1,
+      "iterations": 1,
+      "self_play_episodes": 16,
+      "training_steps": 64,
+      "processes": 4,
+      "checkpoint_every": 1
+    },
+    "evaluation": {
+      "seeds": [101, 211, 307, 401, 503, 601, 701, 809],
+      "move_seconds": 3.0
+    }
+  },
+  "ppo": {
+    "source": "configs/experiments/snakego_task10_ppo_locked.yaml",
+    "canonical_config_hash": "sha256:14d1da2180bad903578eac02843bd4b3c62822024c0fe82bad6b20a121c8c528",
+    "game": {"max_round": 512},
+    "algorithm": {
+      "learning_rate": 0.0003,
+      "weight_decay": 0.0,
+      "gamma": 0.99,
+      "gae_lambda": 0.95,
+      "clip_epsilon": 0.2,
+      "value_coefficient": 0.5,
+      "entropy_coefficient": 0.01,
+      "max_grad_norm": 0.5,
+      "hidden_size": 256,
+      "conv_channels": 64,
+      "recurrent": true,
+      "gru_hidden_size": 256,
+      "vector_envs": 8,
+      "episodes_per_collect": 8,
+      "minibatch_size": 512,
+      "update_repetitions": 4,
+      "shaping_beta": 0.1,
+      "score_scale": 513.0,
+      "snapshot_interval": 2,
+      "max_snapshots": 8,
+      "device": "cuda"
+    },
+    "training": {
+      "seed": 260806,
+      "iterations": 6,
+      "checkpoint_every": 1
+    },
+    "evaluation": {
+      "seeds": [101, 211, 307, 401, 503, 601, 701, 809],
+      "move_seconds": 3.0
+    }
+  },
+  "expert_demo": {
+    "self_play_episodes": 2,
+    "training_steps": 256,
+    "opening_moves": 16,
+    "opening_weight": 32.0,
+    "bounded_final_opponent_order": ["rank6", "rank15"]
+  }
+}

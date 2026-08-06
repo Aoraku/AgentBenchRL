@@ -1,0 +1,6 @@
+algorithm,step,metric,value
+alphazero,20,total_loss_first,0.5944
+alphazero,20,total_loss_mean,0.4441
+alphazero,20,total_loss_last,0.3324
+ppo,1,total_loss,0.20343
+ppo,6,total_loss,0.00570

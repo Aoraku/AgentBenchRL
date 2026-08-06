@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "snapshot_scope": "official SnakeGo controller modules relevant to the AgentBenchRLFrame port",
+  "repository": "https://github.com/Aoraku/AgentBench.git",
+  "historical_repository_access": "may require authorization",
+  "source_commit": "b581bca3ba3d2d7d58a2f8c6bbddd060fc7fdc87",
+  "license_commit": "b17a1fe7d39a0a82eeca4da80a2a30c6db663f03",
+  "license_file": "LICENSE",
+  "rights_declaration": "RIGHTS.md",
+  "license_sha256": "983d115562ed030f5ccf5ede4b189b4f143619c0673e4b6dc013c46022003a5e",
+  "files": {
+    "communication.py": {
+      "source_path": "backend_sources/corpus/26_snakego/logic/gamecode_logic/logic/communication.py",
+      "sha256": "7dd339d3492e5f02c3f1185c3002ee383a8dbc64106747700311b3270d4ebdb3"
+    },
+    "constants.py": {
+      "source_path": "backend_sources/corpus/26_snakego/logic/gamecode_logic/logic/constants.py",
+      "sha256": "0b83c20a65f1a97a5c08927938dddaec88fae43c8b730af169169b545f87ab63"
+    },
+    "formatter.py": {
+      "source_path": "backend_sources/corpus/26_snakego/logic/gamecode_logic/logic/formatter.py",
+      "sha256": "d95dfa37d66d3bd4879d353e3e190427578400a4728e271978f626783ef019cf"
+    },
+    "infrastructure.py": {
+      "source_path": "backend_sources/corpus/26_snakego/logic/gamecode_logic/logic/infrastructure.py",
+      "sha256": "154bc94b0a45f33131e2b3b09be8b061ea6a97ca1bd215f7fcd4473ff7fa6518"
+    },
+    "operate.py": {
+      "source_path": "backend_sources/corpus/26_snakego/logic/gamecode_logic/logic/operate.py",
+      "sha256": "28bc0e8bcd28d36903d0cb78849724ffc32b826fa1dd4172e47e47084cc157cc"
+    },
+    "result.py": {
+      "source_path": "backend_sources/corpus/26_snakego/logic/gamecode_logic/logic/result.py",
+      "sha256": "c57710c489442af28f82f15aac7d1957431cc29858741de1273cc757c42bc6a8"
+    },
+    "spawn.py": {
+      "source_path": "backend_sources/corpus/26_snakego/logic/gamecode_logic/logic/spawn.py",
+      "sha256": "7aaa2fddead772ff8dd3c9fb732c27d8847c6a3bfcc9e24ee37b623c9501b975"
+    }
+  },
+  "excluded_material": [
+    "contestant submissions",
+    "contestant archives",
+    "population manifests",
+    "unrelated AgentBench corpora"
+  ]
+}

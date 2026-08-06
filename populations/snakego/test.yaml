@@ -1,0 +1,32 @@
+schema_version: 1
+set: test
+protocol_version: snakego-official-v1
+agents:
+  - agent_id: snakego-rank01-omegafantasy-ragnarok
+    kind: test_human
+    source_archive: snakego/agents/snakego-rank01-omegafantasy-ragnarok/archive
+    source_archive_hash: sha256:7c23c9c087ffade6135abd5f36f61c97ca4f78f5ddf0484bde5cbaf7226aac1a
+    source_path: snakego/agents/snakego-rank01-omegafantasy-ragnarok/source
+    source_tree_hash: sha256:fca690a1a655274fa3e4845fd62b985f4216b55f58de15c7ade0cf0fb6730d5a
+    move_seconds: 3.0
+  - agent_id: snakego-rank02-viridian-riverside
+    kind: test_human
+    source_archive: snakego/agents/snakego-rank02-viridian-riverside/archive
+    source_archive_hash: sha256:afaed9bc09bee4f2feea84f7bfa0d1c053173fc09565916ddc0a5ea03da76b77
+    source_path: snakego/agents/snakego-rank02-viridian-riverside/source
+    source_tree_hash: sha256:7c58bdb7faaae404e662ac139f61ea386e2eb6fb49db12abedf9363087b027f3
+    move_seconds: 3.0
+  - agent_id: snakego-rank08-jhdjames37-notasample
+    kind: test_human
+    source_archive: snakego/agents/snakego-rank08-jhdjames37-notasample/archive
+    source_archive_hash: sha256:5a0a7d514344cd2d2d5fee1c25a864c7ea4fc98798a97727cdeb2879bbe58e09
+    source_path: snakego/agents/snakego-rank08-jhdjames37-notasample/source
+    source_tree_hash: sha256:e5564ada605c0c308b89dde589606070cb8f266397d5c9e943a096ac5742e071
+    move_seconds: 3.0
+  - agent_id: snakego-rank13-swastika-one
+    kind: test_human
+    source_archive: snakego/agents/snakego-rank13-swastika-one/archive
+    source_archive_hash: sha256:f0242f41cca79a62fdb93077cd786e8530d9391111a3d2330bebd92a7e94116e
+    source_path: snakego/agents/snakego-rank13-swastika-one/source
+    source_tree_hash: sha256:ab22d738d6990a07d2ca42fa8d3c8fda00f241fe50e917488547ef3b42c3e474
+    move_seconds: 3.0

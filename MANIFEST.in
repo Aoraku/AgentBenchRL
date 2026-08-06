@@ -1,0 +1,5 @@
+include provenance/agentbench-snakego-controller/LICENSE
+include provenance/agentbench-snakego-controller/ORIGIN.json
+include provenance/agentbench-snakego-controller/README.md
+include provenance/agentbench-snakego-controller/RIGHTS.md
+recursive-include provenance/agentbench-snakego-controller/controller *.py

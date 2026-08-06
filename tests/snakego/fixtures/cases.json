@@ -1,0 +1,153 @@
+[
+  {
+    "name": "movement_growth_and_player_alternation",
+    "tags": ["movement", "growth", "alternation"],
+    "turn": 8,
+    "player": 0,
+    "max_round": 20,
+    "snakes": [
+      {"id": 0, "camp": 0, "coordinates": [[2, 2], [1, 2]], "bank": 0},
+      {"id": 2, "camp": 0, "coordinates": [[5, 5]], "bank": 0},
+      {"id": 1, "camp": 1, "coordinates": [[13, 13]], "bank": 0}
+    ],
+    "items": [],
+    "walls": [],
+    "actions": [0, 1, 2, 1]
+  },
+  {
+    "name": "boundary_suicides_terminate_as_tie",
+    "tags": ["suicide", "termination", "scoring"],
+    "turn": 9,
+    "player": 0,
+    "max_round": 20,
+    "snakes": [
+      {"id": 0, "camp": 0, "coordinates": [[0, 0]], "bank": 0},
+      {"id": 1, "camp": 1, "coordinates": [[15, 15]], "bank": 0}
+    ],
+    "items": [],
+    "walls": [],
+    "actions": [2, 0]
+  },
+  {
+    "name": "wall_collision_is_a_legal_suicide",
+    "tags": ["collision", "suicide"],
+    "turn": 9,
+    "player": 0,
+    "max_round": 20,
+    "snakes": [
+      {"id": 0, "camp": 0, "coordinates": [[3, 3], [2, 3]], "bank": 0},
+      {"id": 1, "camp": 1, "coordinates": [[13, 13]], "bank": 0}
+    ],
+    "items": [],
+    "walls": [[4, 3, 1]],
+    "actions": [0]
+  },
+  {
+    "name": "other_snake_collision_is_a_legal_suicide",
+    "tags": ["collision", "suicide"],
+    "turn": 9,
+    "player": 0,
+    "max_round": 20,
+    "snakes": [
+      {"id": 0, "camp": 0, "coordinates": [[3, 3], [2, 3]], "bank": 0},
+      {"id": 1, "camp": 1, "coordinates": [[4, 3]], "bank": 0}
+    ],
+    "items": [],
+    "walls": [],
+    "actions": [0]
+  },
+  {
+    "name": "forbidden_reversal_is_rejected",
+    "tags": ["reversal"],
+    "turn": 9,
+    "player": 0,
+    "max_round": 20,
+    "snakes": [
+      {"id": 0, "camp": 0, "coordinates": [[4, 4], [3, 4], [2, 4]], "bank": 0},
+      {"id": 1, "camp": 1, "coordinates": [[13, 13]], "bank": 0}
+    ],
+    "items": [],
+    "walls": [],
+    "actions": [2],
+    "expected_error": "reversal"
+  },
+  {
+    "name": "item_pickup_spawn_and_expiry",
+    "tags": ["items", "expiry", "scoring"],
+    "turn": 1,
+    "player": 0,
+    "max_round": 20,
+    "snakes": [
+      {"id": 0, "camp": 0, "coordinates": [[1, 1]], "bank": 0},
+      {"id": 1, "camp": 1, "coordinates": [[2, 2]], "bank": 0}
+    ],
+    "items": [
+      {"id": 0, "x": 2, "y": 1, "spawn": 1, "type": 0, "param": 3},
+      {"id": 1, "x": 2, "y": 2, "spawn": 2, "type": 0, "param": 2},
+      {"id": 2, "x": 8, "y": 8, "spawn": -14, "type": 0, "param": 1}
+    ],
+    "walls": [],
+    "actions": [0, 2]
+  },
+  {
+    "name": "split_transfers_bank_and_uses_phase_snapshot",
+    "tags": ["split", "alternation"],
+    "turn": 9,
+    "player": 0,
+    "max_round": 20,
+    "snakes": [
+      {"id": 0, "camp": 0, "coordinates": [[5, 5], [4, 5], [3, 5], [2, 5]], "bank": 2, "split_item": 0},
+      {"id": 2, "camp": 0, "coordinates": [[8, 8]], "bank": 0},
+      {"id": 1, "camp": 1, "coordinates": [[13, 13]], "bank": 0}
+    ],
+    "items": [
+      {"id": 0, "x": 7, "y": 7, "spawn": 1, "type": 1, "param": 20, "gotten": 4, "owner": 0}
+    ],
+    "walls": [],
+    "actions": [5, 0, 2]
+  },
+  {
+    "name": "railgun_clears_forward_wall_ray",
+    "tags": ["fire"],
+    "turn": 9,
+    "player": 0,
+    "max_round": 20,
+    "snakes": [
+      {"id": 0, "camp": 0, "coordinates": [[4, 4], [3, 4]], "bank": 0, "railgun": 0},
+      {"id": 1, "camp": 1, "coordinates": [[13, 13]], "bank": 0}
+    ],
+    "items": [
+      {"id": 0, "x": 7, "y": 7, "spawn": 1, "type": 2, "param": 20, "gotten": 4, "owner": 0}
+    ],
+    "walls": [[5, 4, 0], [6, 4, 1], [10, 4, 1]],
+    "actions": [4]
+  },
+  {
+    "name": "self_collision_encloses_and_eliminates",
+    "tags": ["enclosure", "scoring", "termination"],
+    "turn": 9,
+    "player": 0,
+    "max_round": 20,
+    "snakes": [
+      {"id": 0, "camp": 0, "coordinates": [[1, 1], [1, 2], [2, 2], [3, 2], [3, 1], [3, 0], [2, 0], [1, 0], [0, 0]], "bank": 0},
+      {"id": 1, "camp": 1, "coordinates": [[2, 1]], "bank": 0}
+    ],
+    "items": [],
+    "walls": [],
+    "actions": [3]
+  },
+  {
+    "name": "maximum_round_tie_uses_official_player_zero_winner",
+    "tags": ["termination", "scoring"],
+    "turn": 1,
+    "player": 0,
+    "max_round": 1,
+    "snakes": [
+      {"id": 0, "camp": 0, "coordinates": [[2, 2]], "bank": 0},
+      {"id": 1, "camp": 1, "coordinates": [[13, 13]], "bank": 0}
+    ],
+    "items": [],
+    "walls": [],
+    "actions": [0, 2]
+  }
+]

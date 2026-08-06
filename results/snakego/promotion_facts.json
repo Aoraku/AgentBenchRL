@@ -1,0 +1,84 @@
+{
+  "candidate_id": "checkpoint-20",
+  "champion_id": "bootstrap-checkpoint-5",
+  "candidate_checkpoint_hash": "sha256:816070471a8020a2e9a3dcc8d61be34626fa0d831daaf8af24ff5e51f0f16614",
+  "ratings": {
+    "bootstrap-checkpoint-5": 1000.0,
+    "checkpoint-20": 1161.8719815259824,
+    "history-checkpoint-10": 1158.697934341445,
+    "sample-agent-rank15": 1810.598373197002
+  },
+  "rating_uncertainties": {
+    "bootstrap-checkpoint-5": 0.0,
+    "checkpoint-20": 263.86315305335944,
+    "history-checkpoint-10": 355.1015457966174,
+    "sample-agent-rank15": 768.0178181106876
+  },
+  "outcomes": [
+    {
+      "player_a": "checkpoint-20",
+      "player_b": "bootstrap-checkpoint-5",
+      "score_a": 1.0,
+      "valid": true
+    },
+    {
+      "player_a": "bootstrap-checkpoint-5",
+      "player_b": "checkpoint-20",
+      "score_a": 0.5,
+      "valid": true
+    },
+    {
+      "player_a": "checkpoint-20",
+      "player_b": "history-checkpoint-10",
+      "score_a": 0.5,
+      "valid": true
+    },
+    {
+      "player_a": "history-checkpoint-10",
+      "player_b": "checkpoint-20",
+      "score_a": 0.5,
+      "valid": true
+    },
+    {
+      "player_a": "checkpoint-20",
+      "player_b": "sample-agent-rank15",
+      "score_a": 0.0,
+      "valid": true
+    },
+    {
+      "player_a": "sample-agent-rank15",
+      "player_b": "checkpoint-20",
+      "score_a": 1.0,
+      "valid": true
+    }
+  ],
+  "promotion_opponents": [
+    "sample-agent-rank15"
+  ],
+  "protected_reference_scores": {
+    "bootstrap-checkpoint-5": 0.0,
+    "history-checkpoint-10": 0.0,
+    "sample-agent-rank15": 0.0
+  },
+  "evaluation_complete": true,
+  "thresholds": {
+    "minimum_elo_delta": 0.0,
+    "minimum_win_rate_lower_bound": 0.5,
+    "maximum_protected_regression": 0.0
+  },
+  "evaluation_contract": {
+    "bootstrap_status": "frozen_bootstrap_reference_not_formally_promoted",
+    "candidate_status": "candidate_not_promoted",
+    "heldout_used": false,
+    "history_status": "frozen_historical_reference",
+    "population": "training",
+    "protected_groups": [
+      "bootstrap-checkpoint-5",
+      "history-checkpoint-10",
+      "sample-agent-rank15"
+    ],
+    "seed": 101,
+    "side_swapped": true,
+    "valid_games": 6
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "cases": {
+    "boundary_suicides_terminate_as_tie": {"error": null, "snapshots": ["sha256:00eac78d19cfe92905d09e661e8ca7de7d2bd299138a4d1c942461a6040b16c2", "sha256:820384e66dfd99f37e4042038046caa2333416738f781aba21ad6355c8f9a951", "sha256:7d05b4b5b4cc5d824fa562716765a179b9741fb1d2069dbdfd7036593bfce5e5"]},
+    "forbidden_reversal_is_rejected": {"error": "illegal_action", "snapshots": ["sha256:1a0c7553b778a8e6153348e27beb5cb4d3ed0f2f97e9326fe701008dcb0717db"]},
+    "item_pickup_spawn_and_expiry": {"error": null, "snapshots": ["sha256:b1723bfd389ff8906c3356e333c0b826d54bde3c16d9a3b4df1b528eb95b7dff", "sha256:97bca88fd44ea3f939aca2d28fbb321aedcae37b702f83ba640d3f5468fe6adf", "sha256:5306d5ce108507f3624bb7577bf0a8df2b60f8ffcd81d56eecdb5c18b2bd9234"]},
+    "maximum_round_tie_uses_official_player_zero_winner": {"error": null, "snapshots": ["sha256:c60829c97e94be5eaee0108fd529b876638998e11ecd309c6ad0fdd69ad53d24", "sha256:cff37a175dabd7f15109d62390941ac5ce73b339e84bd1861532c827f4ec4946", "sha256:133fecc8555c648cca6c04ab4127ce443df57b5862b2795019ea313b7c0943fe"]},
+    "movement_growth_and_player_alternation": {"error": null, "snapshots": ["sha256:3b8412050b00ef22fe0f7393d34c748b4d9f55b8e1224ab485477a5455dfe286", "sha256:515935fe1455267d819fd323ae2f6de30ec251badc28410ba8ff7e8053fc35f7", "sha256:0cccf016e84bb8b64eba6be9c61c6c3c5436f7afcbb5ea04b863952607cec4a1", "sha256:6f994fcd370f0f72d8998f2f1ef426c818df972571f671ac50a669f9b898c27a", "sha256:ee2254b6e0b45bd5cc677cd32b2558ede8f0db96210471b2f1b5b3f90074bdbd"]},
+    "other_snake_collision_is_a_legal_suicide": {"error": null, "snapshots": ["sha256:72f4418fe0b48fb7514aa2ddf35e02aa6694c00b187cb9cef967cb9b89c3a3fc", "sha256:964ceed91df98eee947df5860d967e31fbd9d523c0f4360ec947489dbddc7e28"]},
+    "railgun_clears_forward_wall_ray": {"error": null, "snapshots": ["sha256:e777a3673abbd6be06005569553accd0dba4f59c54077fa2d1589d0a5dc9904c", "sha256:2aeadeeca5b879eb4226af39987042c0507bc1fd213252fc217526e952246c08"]},
+    "self_collision_encloses_and_eliminates": {"error": null, "snapshots": ["sha256:8ad1835945eabab72372a051f7fb9774886700c5e2f7795766cc26a8d7f12ff3", "sha256:a6392228b22ceb2a9b5d40f5c9b77a04bd3e5ac8b0126dfda0b9489bbbee86b8"]},
+    "split_transfers_bank_and_uses_phase_snapshot": {"error": null, "snapshots": ["sha256:825c8c15cd770482ebc5da7b9f724e8a7075e257ea5e8b52511aa907a1232f4d", "sha256:17c4ee12cef6e95f98d0ecf8a9b31afdca411282cf7e7b935e7e8fd7859cdb90", "sha256:023cf90f299422c74eabe66279203a29979b29d88b4410292d73155477813c88", "sha256:592a0100ca4f0796581ebd026b83e3000245ffb776a88786b086fce460cf02e9"]},
+    "wall_collision_is_a_legal_suicide": {"error": null, "snapshots": ["sha256:8081132da90580bda255a4d62a82f4c127d7ad7e91db451d95f1cb8c7e0057f7", "sha256:95e773383bd2a14cc4d124cf299eb65b67939c54ad7a36d02970a2887057815f"]}
+  },
+  "item_schedules": {
+    "0": "sha256:41bb08228ac82fec8e039f494d806c205526f739d75f23bd8a6f6ec5b0ebc288",
+    "7": "sha256:2503e95a73ec79452a2875091b51a01328f62689b7b35c9a7e7875f486828772",
+    "417": "sha256:0f94a14ac1b64fcb10d9ec7d9a2987fa3f3be3a316c61fff1bfa930877df84d1",
+    "2147483647": "sha256:6ccbc678bbd41266c541c1b9fa1a0649e4287bf4cf0702b55ca0f2eaafbb5dd5"
+  }
+}

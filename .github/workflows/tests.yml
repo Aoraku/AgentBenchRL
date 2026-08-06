@@ -1,0 +1,30 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  cpu-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: python -m pip install --upgrade pip build
+      - run: python -m pip install -e '.[dev]'
+      - run: python -m pytest -m "not gpu" -q
+      - run: python -m build
+      - run: >-
+          python scripts/verify_built_wheel.py
+          dist/agentbench_rl_frame-0.1.0-py3-none-any.whl
+          --sdist dist/agentbench_rl_frame-0.1.0.tar.gz
