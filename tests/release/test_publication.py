@@ -134,9 +134,9 @@ def test_public_controller_provenance_snapshot_is_exact_and_narrow() -> None:
 
 def test_ci_runs_the_supported_cpu_matrix_and_release_build() -> None:
     """A release tested on only one interpreter does not support its declared matrix."""
-    workflow = yaml.safe_load(
-        (ROOT / ".github/workflows/tests.yml").read_text(encoding="utf-8")
-    )
+    workflow_text = (ROOT / ".github/workflows/tests.yml").read_text(encoding="utf-8")
+    assert "\n  workflow_dispatch:\n" in workflow_text
+    workflow = yaml.safe_load(workflow_text)
     jobs = workflow["jobs"]
     cpu = jobs["cpu-tests"]
 
