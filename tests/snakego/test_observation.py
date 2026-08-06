@@ -296,6 +296,33 @@ def test_observation_preserves_each_snakes_identity_body_order_and_inventory() -
     assert scalars["active_friendly_slot"] == 0.25
 
 
+def test_snake_slots_follow_official_list_order_after_nested_splits() -> None:
+    """Contestant role assignment follows my_snakes order, which is not ID order."""
+    game = SnakeGoGame.from_state(
+        SnakeGoState(
+            turn=20,
+            current_player=0,
+            max_round=64,
+            snakes=[
+                SnakeState(0, 0, [(4, 4)]),
+                SnakeState(4, 0, [(5, 4)]),
+                SnakeState(2, 0, [(6, 4)]),
+                SnakeState(1, 1, [(12, 12)]),
+            ],
+            phase_snake_ids=[0, 4, 2],
+        )
+    )
+    observation = game.observe(0)
+    planes = {name: index for index, name in enumerate(PLANE_NAMES)}
+
+    assert observation.planes[
+        planes["friendly_snake_2_body_order"], 5, 4
+    ] == 1.0
+    assert observation.planes[
+        planes["friendly_snake_3_body_order"], 6, 4
+    ] == 1.0
+
+
 def _observations_are_equal(first, second) -> bool:
     return bool(
         np.array_equal(first.planes, second.planes)

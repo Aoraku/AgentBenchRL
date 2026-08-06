@@ -39,14 +39,8 @@ def encode_observation(
         else None
     )
     active_snake = state.snake(active_id) if active_id is not None else None
-    friendly_snakes = sorted(
-        (snake for snake in state.snakes if snake.camp == player),
-        key=lambda snake: snake.id,
-    )
-    opponent_snakes = sorted(
-        (snake for snake in state.snakes if snake.camp != player),
-        key=lambda snake: snake.id,
-    )
+    friendly_snakes = [snake for snake in state.snakes if snake.camp == player]
+    opponent_snakes = [snake for snake in state.snakes if snake.camp != player]
     snake_slots = {
         snake.id: ("friendly", slot)
         for slot, snake in enumerate(friendly_snakes, start=1)
