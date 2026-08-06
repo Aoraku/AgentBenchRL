@@ -50,9 +50,24 @@ def encode_observation(
         else:
             head_plane = _PLANE["opponent_heads"]
             body_plane = _PLANE["opponent_bodies"]
+        length_plane = _PLANE[
+            "friendly_body_length" if snake.camp == player else "opponent_body_length"
+        ]
         for index, (x, y) in enumerate(snake.coordinates):
             cx, cy = canonical_coordinate(x, y, player)
             planes[head_plane if index == 0 else body_plane, cx, cy] = 1.0
+            planes[length_plane, cx, cy] = min(1.0, len(snake.coordinates) / 256.0)
+            if snake.id == active_id:
+                planes[_PLANE["active_body_order"], cx, cy] = (
+                    len(snake.coordinates) - index
+                ) / len(snake.coordinates)
+
+    if active_snake is not None:
+        tail_x, tail_y = canonical_coordinate(*active_snake.coordinates[-1], player)
+        planes[_PLANE["active_tail"], tail_x, tail_y] = 1.0
+        if len(active_snake.coordinates) >= 2:
+            neck_x, neck_y = canonical_coordinate(*active_snake.coordinates[1], player)
+            planes[_PLANE["active_neck"], neck_x, neck_y] = 1.0
 
     if active_snake is not None and active_snake.id == active_snake.camp:
         x, y = canonical_coordinate(*active_snake.coordinates[0], player)
@@ -87,14 +102,15 @@ def encode_observation(
             continue
         cx, cy = canonical_coordinate(item.x, item.y, player)
         item_type = item.item_type if item.item_type in (0, 1, 2) else 1
+        item_name = ("length", "split", "fire")[item_type]
         if int(state.item_grid[item.x, item.y]) == item.id:
-            planes[9 + item_type, cx, cy] = 1.0
+            planes[_PLANE[f"active_{item_name}_items"], cx, cy] = 1.0
             planes[_PLANE["active_item_param"], cx, cy] = _normalized_item_param(
                 item.item_type, item.param, state.max_round
             )
         elif item.spawn_round > state.turn:
             future_items.append(item)
-            planes[12 + item_type, cx, cy] = 1.0
+            planes[_PLANE[f"future_{item_name}_items"], cx, cy] = 1.0
             normalized_time = min(
                 1.0, max(0.0, (item.spawn_round - state.turn) / state.max_round)
             )

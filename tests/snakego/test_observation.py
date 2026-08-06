@@ -132,8 +132,8 @@ def test_observation_has_exact_shape_finite_normalized_values_and_named_content(
     game, _ = _symmetric_games()
     observation = game.observe(0)
 
-    assert observation.planes.shape == (24, 16, 16)
-    assert observation.scalars.shape == (39,)
+    assert observation.planes.shape == (29, 16, 16)
+    assert observation.scalars.shape == (111,)
     assert observation.planes.dtype == np.float32
     assert observation.scalars.dtype == np.float32
     assert np.isfinite(observation.planes).all()
@@ -144,6 +144,15 @@ def test_observation_has_exact_shape_finite_normalized_values_and_named_content(
     plane = {name: index for index, name in enumerate(PLANE_NAMES)}
     assert observation.planes[plane["active_head"], 4, 4] == 1.0
     assert observation.planes[plane["active_body"], 3, 4] == 1.0
+    assert observation.planes[plane["active_neck"], 3, 4] == 1.0
+    assert observation.planes[plane["active_tail"], 2, 4] == 1.0
+    assert observation.planes[plane["active_body_order"], 4, 4] == 1.0
+    assert observation.planes[plane["active_body_order"], 2, 4] == pytest.approx(
+        1 / 3
+    )
+    assert observation.planes[plane["friendly_body_length"], 3, 4] == pytest.approx(
+        3 / 256
+    )
     assert observation.planes[plane["friendly_heads"], 8, 3] == 1.0
     assert observation.planes[plane["opponent_heads"], 12, 12] == 1.0
     assert observation.planes[plane["friendly_walls"], 2, 7] == 1.0

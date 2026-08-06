@@ -12,6 +12,11 @@ from rlbench.game import BoardObservationSpec, DiscreteGameSpec, Observation
 PLANE_NAMES = (
     "active_head",
     "active_body",
+    "active_neck",
+    "active_tail",
+    "active_body_order",
+    "friendly_body_length",
+    "opponent_body_length",
     "friendly_heads",
     "friendly_bodies",
     "opponent_heads",
@@ -36,7 +41,7 @@ PLANE_NAMES = (
     "future_latest_spawn_time",
 )
 
-FUTURE_ITEM_SLOTS = 4
+FUTURE_ITEM_SLOTS = 16
 MAX_ANNOUNCED_ITEMS = 512
 
 _BASE_SCALAR_NAMES = (

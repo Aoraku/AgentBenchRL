@@ -101,8 +101,8 @@ def test_registry_is_explicit_and_validate_game_runs_contract(
     assert result == {
         "action_count": 6,
         "game": "snakego",
-        "observation_planes": 24,
-        "observation_scalars": 39,
+        "observation_planes": 29,
+        "observation_scalars": 111,
         "status": "valid",
     }
 
