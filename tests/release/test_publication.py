@@ -42,6 +42,11 @@ def test_release_metadata_declares_an_installable_mit_project() -> None:
     assert project["license-files"] == ["LICENSE", "LICENSES/*.txt"]
     assert project["authors"]
     assert project["scripts"] == {"rlbench": "rlbench.cli.main:main"}
+    assert project["urls"] == {
+        "Homepage": "https://github.com/Aoraku/AgentBenchRL",
+        "Repository": "https://github.com/Aoraku/AgentBenchRL.git",
+        "Issues": "https://github.com/Aoraku/AgentBenchRL/issues",
+    }
     assert "Programming Language :: Python :: 3.11" in project["classifiers"]
     assert "License :: OSI Approved :: MIT License" not in project["classifiers"]
     assert (ROOT / "LICENSE").read_text(encoding="utf-8").startswith("MIT License\n")
@@ -78,6 +83,7 @@ def test_release_metadata_declares_an_installable_mit_project() -> None:
     assert citation["version"] == "0.1.0"
     assert citation["license"] == "MIT"
     assert citation["authors"]
+    assert citation["repository-code"] == "https://github.com/Aoraku/AgentBenchRL"
 
 
 def test_public_controller_provenance_snapshot_is_exact_and_narrow() -> None:

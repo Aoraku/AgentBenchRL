@@ -39,9 +39,9 @@ rlbench = "rlbench.cli.main:main"
 dev = ["pytest>=8"]
 
 [project.urls]
-Homepage = "https://github.com/Aoraku/AgentBenchRLFrame"
-Repository = "https://github.com/Aoraku/AgentBenchRLFrame.git"
-Issues = "https://github.com/Aoraku/AgentBenchRLFrame/issues"
+Homepage = "https://github.com/Aoraku/AgentBenchRL"
+Repository = "https://github.com/Aoraku/AgentBenchRL.git"
+Issues = "https://github.com/Aoraku/AgentBenchRL/issues"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

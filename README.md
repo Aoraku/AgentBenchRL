@@ -37,7 +37,7 @@ license.
 ## Install and verify
 
 ```bash
-python -m pip install 'agentbench-rl-frame @ git+https://github.com/Aoraku/AgentBenchRLFrame.git@v0.1.0'
+python -m pip install 'agentbench-rl-frame @ git+https://github.com/Aoraku/AgentBenchRL.git@v0.1.0'
 python -m pip install -e '.[dev]'  # contributor checkout
 python -m pytest
 rlbench validate-game snakego --seed 7
