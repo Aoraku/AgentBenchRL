@@ -21,6 +21,14 @@ PLANE_NAMES = (
     "friendly_bodies",
     "opponent_heads",
     "opponent_bodies",
+    "friendly_snake_1_body_order",
+    "friendly_snake_2_body_order",
+    "friendly_snake_3_body_order",
+    "friendly_snake_4_body_order",
+    "opponent_snake_1_body_order",
+    "opponent_snake_2_body_order",
+    "opponent_snake_3_body_order",
+    "opponent_snake_4_body_order",
     "friendly_walls",
     "opponent_walls",
     "blocked",
@@ -56,6 +64,22 @@ _BASE_SCALAR_NAMES = (
     "opponent_snake_count",
     "score_margin",
     "first_item_owner",
+    "phase_index",
+    "phase_length",
+    "active_friendly_slot",
+)
+
+_SNAKE_SLOT_SCALAR_NAMES = tuple(
+    f"{side}_snake_{slot}_{field}"
+    for side in ("friendly", "opponent")
+    for slot in range(1, 5)
+    for field in (
+        "present",
+        "length",
+        "growth_bank",
+        "inventory_split",
+        "inventory_fire",
+    )
 )
 
 _FUTURE_SLOT_SCALAR_NAMES = tuple(
@@ -66,6 +90,7 @@ _FUTURE_SLOT_SCALAR_NAMES = tuple(
 
 SCALAR_NAMES = (
     *_BASE_SCALAR_NAMES,
+    *_SNAKE_SLOT_SCALAR_NAMES,
     *_FUTURE_SLOT_SCALAR_NAMES,
     "future_overflow_count",
     "future_overflow_spawn_checksum",

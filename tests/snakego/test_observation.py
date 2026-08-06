@@ -134,8 +134,8 @@ def test_observation_has_exact_shape_finite_normalized_values_and_named_content(
     game, _ = _symmetric_games()
     observation = game.observe(0)
 
-    assert observation.planes.shape == (29, 16, 16)
-    assert observation.scalars.shape == (111,)
+    assert observation.planes.shape == (37, 16, 16)
+    assert observation.scalars.shape == (154,)
     assert observation.planes.dtype == np.float32
     assert observation.scalars.dtype == np.float32
     assert np.isfinite(observation.planes).all()
@@ -157,6 +157,18 @@ def test_observation_has_exact_shape_finite_normalized_values_and_named_content(
     )
     assert observation.planes[plane["friendly_heads"], 8, 3] == 1.0
     assert observation.planes[plane["opponent_heads"], 12, 12] == 1.0
+    assert observation.planes[
+        plane["friendly_snake_1_body_order"], 4, 4
+    ] == 1.0
+    assert observation.planes[
+        plane["friendly_snake_1_body_order"], 2, 4
+    ] == pytest.approx(1 / 3)
+    assert observation.planes[
+        plane["friendly_snake_2_body_order"], 8, 3
+    ] == 1.0
+    assert observation.planes[
+        plane["opponent_snake_1_body_order"], 12, 12
+    ] == 1.0
     assert observation.planes[plane["friendly_walls"], 2, 7] == 1.0
     assert observation.planes[plane["opponent_walls"], 13, 8] == 1.0
     assert observation.planes[plane["blocked"], 8, 8] == 1.0
@@ -238,6 +250,50 @@ def test_scalar_inventory_distinguishes_split_items_from_railguns() -> None:
 
     assert scalars["inventory_split"] == 1.0
     assert scalars["inventory_fire"] == 0.0
+    assert scalars["friendly_snake_1_inventory_split"] == 1.0
+    assert scalars["friendly_snake_1_inventory_fire"] == 0.0
+
+
+def test_observation_preserves_each_snakes_identity_body_order_and_inventory() -> None:
+    """Multi-snake policies need stable identities rather than merged occupancy planes."""
+    game = SnakeGoGame.from_state(
+        SnakeGoState(
+            turn=9,
+            current_player=0,
+            max_round=20,
+            snakes=[
+                SnakeState(0, 0, [(4, 4), (3, 4), (2, 4)], length_bank=2),
+                SnakeState(3, 0, [(8, 4), (8, 3)], railgun_item_id=8),
+                SnakeState(1, 1, [(12, 12), (13, 12)], split_item_id=9),
+            ],
+            phase_snake_ids=[0, 3],
+        )
+    )
+    observation = game.observe(0)
+    planes = {name: index for index, name in enumerate(PLANE_NAMES)}
+    scalars = dict(zip(SCALAR_NAMES, observation.scalars, strict=True))
+
+    assert observation.planes[
+        planes["friendly_snake_1_body_order"], 4, 4
+    ] == 1.0
+    assert observation.planes[
+        planes["friendly_snake_1_body_order"], 2, 4
+    ] == pytest.approx(1 / 3)
+    assert observation.planes[
+        planes["friendly_snake_2_body_order"], 8, 4
+    ] == 1.0
+    assert observation.planes[
+        planes["friendly_snake_2_body_order"], 8, 3
+    ] == 0.5
+    assert observation.planes[
+        planes["opponent_snake_1_body_order"], 12, 12
+    ] == 1.0
+    assert scalars["friendly_snake_1_growth_bank"] == pytest.approx(2 / 256)
+    assert scalars["friendly_snake_2_inventory_fire"] == 1.0
+    assert scalars["opponent_snake_1_inventory_split"] == 1.0
+    assert scalars["phase_index"] == 0.0
+    assert scalars["phase_length"] == 0.5
+    assert scalars["active_friendly_slot"] == 0.25
 
 
 def _observations_are_equal(first, second) -> bool:

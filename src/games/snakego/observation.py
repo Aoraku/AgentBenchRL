@@ -39,6 +39,24 @@ def encode_observation(
         else None
     )
     active_snake = state.snake(active_id) if active_id is not None else None
+    friendly_snakes = sorted(
+        (snake for snake in state.snakes if snake.camp == player),
+        key=lambda snake: snake.id,
+    )
+    opponent_snakes = sorted(
+        (snake for snake in state.snakes if snake.camp != player),
+        key=lambda snake: snake.id,
+    )
+    snake_slots = {
+        snake.id: ("friendly", slot)
+        for slot, snake in enumerate(friendly_snakes, start=1)
+    }
+    snake_slots.update(
+        {
+            snake.id: ("opponent", slot)
+            for slot, snake in enumerate(opponent_snakes, start=1)
+        }
+    )
 
     for snake in state.snakes:
         if snake.id == active_id:
@@ -53,10 +71,15 @@ def encode_observation(
         length_plane = _PLANE[
             "friendly_body_length" if snake.camp == player else "opponent_body_length"
         ]
+        side, slot = snake_slots[snake.id]
+        slot_plane = _PLANE[f"{side}_snake_{slot}_body_order"]
         for index, (x, y) in enumerate(snake.coordinates):
             cx, cy = canonical_coordinate(x, y, player)
             planes[head_plane if index == 0 else body_plane, cx, cy] = 1.0
             planes[length_plane, cx, cy] = min(1.0, len(snake.coordinates) / 256.0)
+            planes[slot_plane, cx, cy] = (
+                len(snake.coordinates) - index
+            ) / len(snake.coordinates)
             if snake.id == active_id:
                 planes[_PLANE["active_body_order"], cx, cy] = (
                     len(snake.coordinates) - index
@@ -151,18 +174,43 @@ def encode_observation(
         else (1.0 if state.first_item_player == player else -1.0)
     )
     scalar_values = [
-            np.clip(state.turn / state.max_round, 0.0, 1.0),
-            np.clip((state.max_round - state.turn + 1) / state.max_round, 0.0, 1.0),
-            np.clip(active_length / 256.0, 0.0, 1.0),
-            np.clip(active_bank / 256.0, 0.0, 1.0),
-            0.0,
-            split_inventory,
-            fire_inventory,
-            friendly_count / 4.0,
-            opponent_count / 4.0,
-            score_margin,
-            first_item,
+        np.clip(state.turn / state.max_round, 0.0, 1.0),
+        np.clip((state.max_round - state.turn + 1) / state.max_round, 0.0, 1.0),
+        np.clip(active_length / 256.0, 0.0, 1.0),
+        np.clip(active_bank / 256.0, 0.0, 1.0),
+        0.0,
+        split_inventory,
+        fire_inventory,
+        friendly_count / 4.0,
+        opponent_count / 4.0,
+        score_margin,
+        first_item,
+        np.clip(state.phase_index / 3.0, 0.0, 1.0),
+        np.clip(len(active_ids) / 4.0, 0.0, 1.0),
+        (
+            snake_slots[active_id][1] / 4.0
+            if active_id is not None
+            and active_id in snake_slots
+            and snake_slots[active_id][0] == "friendly"
+            else 0.0
+        ),
     ]
+
+    for snakes in (friendly_snakes, opponent_snakes):
+        for slot in range(4):
+            if slot >= len(snakes):
+                scalar_values.extend((0.0,) * 5)
+                continue
+            snake = snakes[slot]
+            scalar_values.extend(
+                (
+                    1.0,
+                    np.clip(len(snake.coordinates) / 256.0, 0.0, 1.0),
+                    np.clip(snake.length_bank / 256.0, 0.0, 1.0),
+                    1.0 if snake.split_item_id is not None else 0.0,
+                    1.0 if snake.railgun_item_id is not None else 0.0,
+                )
+            )
 
     future_items.sort(
         key=lambda item: (
