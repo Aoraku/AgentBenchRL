@@ -1,3 +1,4 @@
+include docs/architecture.md
 include provenance/agentbench-snakego-controller/LICENSE
 include provenance/agentbench-snakego-controller/ORIGIN.json
 include provenance/agentbench-snakego-controller/README.md

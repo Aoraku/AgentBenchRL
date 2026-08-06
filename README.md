@@ -10,6 +10,9 @@ port derived from the MIT-licensed AgentBench/THUAC 2022 controller.
 
 Python 3.11 through 3.13 is supported.
 
+The unified game, algorithm, evaluation, and telemetry boundaries are specified
+in [the architecture design](docs/architecture.md).
+
 ## License and SnakeGo provenance
 
 AgentBenchRLFrame is distributed under the MIT license. The implementation in
