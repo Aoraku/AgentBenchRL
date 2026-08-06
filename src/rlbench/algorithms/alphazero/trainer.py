@@ -180,6 +180,7 @@ class AlphaZeroTrainer:
         expert_demo: bool = False,
         expert_demo_opening_moves: int = 0,
         expert_demo_opening_weight: float = 1.0,
+        expert_demo_max_decisions: int | None = None,
         deadline_monotonic: float | None = None,
     ) -> GenerationMetrics:
         _require_allocation_time(deadline_monotonic)
@@ -241,6 +242,7 @@ class AlphaZeroTrainer:
                         expert_demo=expert_demo,
                         expert_demo_opening_moves=expert_demo_opening_moves,
                         expert_demo_opening_weight=expert_demo_opening_weight,
+                        expert_demo_max_decisions=expert_demo_max_decisions,
                         deadline_monotonic=deadline_monotonic,
                     )
                 )

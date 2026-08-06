@@ -108,6 +108,12 @@ snapshots. Raw human opponent
 mixtures and promotion cadence are library-level orchestration concerns:
 construct a `LeagueState`, attach a trainer evaluation callback, schedule
 frozen matches, and apply `evaluate_promotion` to the resulting facts.
+`AlphaZeroTrainer.run_generation` can record one-hot actions from
+`train_human` opponents as expert replay. The optional
+`expert_demo_max_decisions` bound retains only an opening prefix from each
+episode; `expert_demo_opening_moves` and `expert_demo_opening_weight` control
+the weight of that prefix. These controls are game-independent, and held-out
+`test_human` policies are rejected from expert replay.
 
 ## Build SnakeGo human populations
 

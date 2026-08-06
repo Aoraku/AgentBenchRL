@@ -708,6 +708,90 @@ def test_expert_demo_opening_boost_sets_weight_and_decision_index() -> None:
     )
 
 
+def test_expert_demo_limit_keeps_only_the_configured_opening_prefix() -> None:
+    """Long post-elimination play must not flood replay with irrelevant demos."""
+
+    class FirstLegalOpponent:
+        def act_game(self, game) -> int:
+            return int(np.flatnonzero(game.legal_action_mask())[0])
+
+    config = _config(simulations=4)
+    worker = SelfPlayWorker(
+        TicTacToe,
+        PolicyValueNet.from_game_spec(TicTacToe.spec, config),
+        config,
+    )
+
+    samples = worker.play_episode_against(
+        FirstLegalOpponent(),
+        opponent_id="train-human",
+        learner_player=0,
+        seed=71,
+        expert_demo=True,
+        expert_demo_max_decisions=1,
+    )
+
+    expert = [sample for sample in samples if sample.source == "expert_demo"]
+    assert len(expert) == 1
+    assert expert[0].decision_index == 0
+
+
+@pytest.mark.parametrize("limit", [-1, True])
+def test_expert_demo_limit_rejects_invalid_values(limit) -> None:
+    config = _config(simulations=4)
+    worker = SelfPlayWorker(
+        TicTacToe,
+        PolicyValueNet.from_game_spec(TicTacToe.spec, config),
+        config,
+    )
+
+    with pytest.raises(ValueError, match="expert_demo_max_decisions"):
+        worker.play_episode_against(
+            object(),
+            opponent_id="train-human",
+            learner_player=0,
+            seed=73,
+            expert_demo=True,
+            expert_demo_max_decisions=limit,
+        )
+
+
+def test_trainer_propagates_expert_demo_limit_to_mixed_episodes() -> None:
+    class FirstLegalOpponent:
+        def act_game(self, game) -> int:
+            return int(np.flatnonzero(game.legal_action_mask())[0])
+
+    config = _config(simulations=4)
+    opponent_id = "train-human"
+    league = LeagueState(
+        anchor_id=opponent_id,
+        champion_id=opponent_id,
+        members=(
+            LeagueMember(opponent_id, "sha256:" + "a" * 64, "train_human"),
+        ),
+    )
+    trainer = AlphaZeroTrainer(
+        PolicyValueNet.from_game_spec(TicTacToe.spec, config),
+        config,
+        seed=79,
+        league=league,
+    )
+
+    trainer.run_generation(
+        TicTacToe,
+        self_play_episodes=1,
+        training_steps=0,
+        processes=1,
+        training_opponents={opponent_id: FirstLegalOpponent()},
+        opponent_episodes=1,
+        expert_demo=True,
+        expert_demo_max_decisions=1,
+    )
+
+    sources = [sample["source"] for sample in trainer.replay.state_dict()["samples"]]
+    assert sources.count("expert_demo") == 1
+
+
 def test_pure_selfplay_targets_remain_uniformly_weighted() -> None:
     """Opening emphasis must not alter ordinary self-play optimization."""
     config = _config(simulations=4)

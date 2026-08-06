@@ -120,6 +120,7 @@ class SelfPlayWorker:
         expert_demo: bool = False,
         expert_demo_opening_moves: int = 0,
         expert_demo_opening_weight: float = 1.0,
+        expert_demo_max_decisions: int | None = None,
         deadline_monotonic: float | None = None,
     ) -> list[ReplaySample]:
         """Generate search targets and optional expert demonstrations."""
@@ -144,10 +145,18 @@ class SelfPlayWorker:
             or expert_demo_opening_weight < 1.0
         ):
             raise ValueError("expert_demo_opening_weight must be finite and at least one")
-        if not expert_demo and (
-            expert_demo_opening_moves or expert_demo_opening_weight != 1.0
+        if expert_demo_max_decisions is not None and (
+            isinstance(expert_demo_max_decisions, bool)
+            or not isinstance(expert_demo_max_decisions, int)
+            or expert_demo_max_decisions < 0
         ):
-            raise ValueError("expert opening emphasis requires expert_demo")
+            raise ValueError("expert_demo_max_decisions must be non-negative or None")
+        if not expert_demo and (
+            expert_demo_opening_moves
+            or expert_demo_opening_weight != 1.0
+            or expert_demo_max_decisions is not None
+        ):
+            raise ValueError("expert demo controls require expert_demo")
         episode_seed = self.seed if seed is None else seed
         episode = self._generate_episode(
             episode_seed,
@@ -158,6 +167,7 @@ class SelfPlayWorker:
             expert_demo=expert_demo,
             expert_demo_opening_moves=expert_demo_opening_moves,
             expert_demo_opening_weight=float(expert_demo_opening_weight),
+            expert_demo_max_decisions=expert_demo_max_decisions,
             deadline_monotonic=deadline_monotonic,
         )
         self._last_episode = episode
@@ -177,6 +187,7 @@ class SelfPlayWorker:
         expert_demo: bool = False,
         expert_demo_opening_moves: int = 0,
         expert_demo_opening_weight: float = 1.0,
+        expert_demo_max_decisions: int | None = None,
         deadline_monotonic: float | None = None,
     ) -> SelfPlayEpisode:
         _require_deadline(deadline_monotonic)
@@ -241,7 +252,16 @@ class SelfPlayWorker:
                     or not bool(legal_mask[action])
                 ):
                     raise ValueError("training opponent selected an illegal action")
-                if opponent is not None and player != learner_player and expert_demo:
+                record_expert = (
+                    opponent is not None
+                    and player != learner_player
+                    and expert_demo
+                    and (
+                        expert_demo_max_decisions is None
+                        or expert_decision_index < expert_demo_max_decisions
+                    )
+                )
+                if record_expert:
                     expert_policy = np.zeros(len(legal_mask), dtype=np.float32)
                     expert_policy[action] = 1.0
                     pending.append(
@@ -257,6 +277,7 @@ class SelfPlayWorker:
                             expert_decision_index,
                         )
                     )
+                if opponent is not None and player != learner_player and expert_demo:
                     expert_decision_index += 1
                 record = game.step(action)
                 decisions.append(
