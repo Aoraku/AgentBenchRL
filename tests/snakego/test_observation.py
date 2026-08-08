@@ -134,7 +134,7 @@ def test_observation_has_exact_shape_finite_normalized_values_and_named_content(
     game, _ = _symmetric_games()
     observation = game.observe(0)
 
-    assert observation.planes.shape == (37, 16, 16)
+    assert observation.planes.shape == (85, 16, 16)
     assert observation.scalars.shape == (154,)
     assert observation.planes.dtype == np.float32
     assert observation.scalars.dtype == np.float32
@@ -176,6 +176,9 @@ def test_observation_has_exact_shape_finite_normalized_values_and_named_content(
     assert observation.planes[plane["future_fire_items"], 7, 6] == 1.0
     assert observation.planes[plane["future_split_items"], 9, 2] == 1.0
     assert observation.planes[plane["future_spawn_time"], 7, 6] == pytest.approx(3 / 32)
+    assert observation.planes[plane["future_cell_1_present"], 7, 6] == 1.0
+    assert observation.planes[plane["future_cell_1_fire"], 7, 6] == 1.0
+    assert observation.planes[plane["future_cell_1_spawn"], 7, 6] == pytest.approx(3 / 32)
 
 
 def test_player_one_rotation_hides_absolute_camp_and_preserves_action_symmetry() -> None:
@@ -425,6 +428,39 @@ def test_observation_distinguishes_later_public_items_after_same_earliest_item()
     later_later_item = game(40).observe(0)
 
     assert not _observations_are_equal(earlier_later_item, later_later_item)
+
+
+def test_observation_preserves_multiple_future_items_at_the_same_cell() -> None:
+    """Per-cell slots expose the exact schedule used by planning policies."""
+    game = SnakeGoGame.from_state(
+        SnakeGoState(
+            turn=4,
+            current_player=0,
+            max_round=64,
+            snakes=[
+                SnakeState(0, 0, [(4, 4), (3, 4)]),
+                SnakeState(1, 1, [(12, 12)]),
+            ],
+            items=[
+                ItemState(0, 8, 8, 8, 0, 2),
+                ItemState(1, 8, 8, 24, 1, 0),
+                ItemState(2, 8, 8, 40, 2, 0),
+            ],
+        )
+    )
+
+    observation = game.observe(0)
+    planes = {name: index for index, name in enumerate(PLANE_NAMES)}
+
+    assert observation.planes[planes["future_cell_1_length"], 8, 8] == 1.0
+    assert observation.planes[planes["future_cell_2_split"], 8, 8] == 1.0
+    assert observation.planes[planes["future_cell_3_fire"], 8, 8] == 1.0
+    assert observation.planes[planes["future_cell_2_spawn"], 8, 8] == pytest.approx(
+        20 / 64
+    )
+    assert observation.planes[planes["future_cell_3_spawn"], 8, 8] == pytest.approx(
+        36 / 64
+    )
 
 
 def test_seeded_schedules_and_state_ids_are_local_and_deterministic() -> None:

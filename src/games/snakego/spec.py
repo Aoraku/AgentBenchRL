@@ -47,6 +47,11 @@ PLANE_NAMES = (
     "future_item_param",
     "future_item_count",
     "future_latest_spawn_time",
+    *(
+        f"future_cell_{slot}_{field}"
+        for slot in range(1, 9)
+        for field in ("present", "length", "split", "fire", "spawn", "param")
+    ),
 )
 
 FUTURE_ITEM_SLOTS = 16

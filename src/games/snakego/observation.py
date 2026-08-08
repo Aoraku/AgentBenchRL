@@ -16,6 +16,7 @@ from .state import BOARD_SIZE, EMPTY, ItemState, SnakeGoState
 
 _PLANE = {name: index for index, name in enumerate(PLANE_NAMES)}
 _MAX_FUTURE_ITEMS_PER_CELL = 32
+_EXACT_FUTURE_ITEMS_PER_CELL = 8
 _CHECKSUM_MODULUS = 65_521
 
 
@@ -215,6 +216,27 @@ def encode_observation(
             item.id,
         )
     )
+    future_items_by_cell: dict[tuple[int, int], list[ItemState]] = {}
+    for item in future_items:
+        cell = canonical_coordinate(item.x, item.y, player)
+        future_items_by_cell.setdefault(cell, []).append(item)
+    for (x, y), cell_items in future_items_by_cell.items():
+        for slot, item in enumerate(
+            cell_items[:_EXACT_FUTURE_ITEMS_PER_CELL], start=1
+        ):
+            prefix = f"future_cell_{slot}"
+            planes[_PLANE[f"{prefix}_present"], x, y] = 1.0
+            item_type = item.item_type if item.item_type in (0, 1, 2) else 1
+            item_name = ("length", "split", "fire")[item_type]
+            planes[_PLANE[f"{prefix}_{item_name}"], x, y] = 1.0
+            planes[_PLANE[f"{prefix}_spawn"], x, y] = np.clip(
+                (item.spawn_round - state.turn) / state.max_round,
+                0.0,
+                1.0,
+            )
+            planes[_PLANE[f"{prefix}_param"], x, y] = _normalized_item_param(
+                item.item_type, item.param, state.max_round
+            )
     for slot in range(FUTURE_ITEM_SLOTS):
         if slot >= len(future_items):
             scalar_values.extend((0.0,) * 6)
