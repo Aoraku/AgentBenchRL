@@ -308,9 +308,12 @@ def test_training_action_mask_avoids_a_small_reachable_pocket() -> None:
     assert trapped.state.snake(0) is not None
 
     mask = game.training_action_mask(0)
+    search_mask = game.search_action_mask(0)
 
     assert not mask[0]
     assert mask[1]
+    assert search_mask[0]
+    assert search_mask[1]
 
 
 def test_scalar_inventory_distinguishes_split_items_from_railguns() -> None:

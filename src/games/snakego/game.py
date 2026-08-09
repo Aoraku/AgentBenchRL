@@ -160,8 +160,21 @@ class SnakeGoGame:
         return safe if np.any(safe) else legal
 
     def search_action_mask(self, player: int) -> NDArray[np.bool_]:
-        """Use the deployment action subset to reduce AlphaZero branching."""
-        return self.training_action_mask(player)
+        """Remove immediate bad deaths without pruning MCTS detours."""
+        if player != self.current_player():
+            raise ValueError("search action mask requires the acting player")
+        legal = self.legal_action_mask()
+        snake_id = self.engine.current_snake.id
+        wall_count = int(np.count_nonzero(self.state.walls == player))
+        safe = np.zeros_like(legal)
+        for action in np.flatnonzero(legal):
+            branch = self.clone()
+            branch.step(int(action))
+            safe[action] = (
+                branch.state.snake(snake_id) is not None
+                or int(np.count_nonzero(branch.state.walls == player)) > wall_count
+            )
+        return safe if np.any(safe) else legal
 
     @property
     def official_winner(self) -> int | None:
