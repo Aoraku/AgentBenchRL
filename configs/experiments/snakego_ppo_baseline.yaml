@@ -12,7 +12,6 @@ algorithms:
     max_grad_norm: 0.5
     hidden_size: 256
     conv_channels: 64
-    residual_blocks: 0
     recurrent: true
     gru_hidden_size: 256
     vector_envs: 8

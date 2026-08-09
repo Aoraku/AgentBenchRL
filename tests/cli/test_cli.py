@@ -291,6 +291,23 @@ def test_config_selects_only_the_requested_algorithm_override(tmp_path: Path) ->
     assert "simulations" not in ppo.canonical["algorithm"]
 
 
+def test_ppo_residual_depth_is_canonical_only_when_selected(tmp_path: Path) -> None:
+    legacy = _write_yaml(tmp_path / "legacy.yaml", "training:\n  seed: 7\n")
+    residual = _write_yaml(
+        tmp_path / "residual.yaml",
+        "algorithm:\n  residual_blocks: 3\ntraining:\n  seed: 7\n",
+    )
+
+    legacy_config = compose_config(legacy, game="snakego", algorithm="ppo")
+    residual_config = compose_config(residual, game="snakego", algorithm="ppo")
+
+    assert "residual_blocks" not in legacy_config.canonical["algorithm"]
+    assert legacy_config.algorithm_settings().residual_blocks == 0
+    assert residual_config.canonical["algorithm"]["residual_blocks"] == 3
+    assert residual_config.algorithm_settings().residual_blocks == 3
+    assert residual_config.config_hash != legacy_config.config_hash
+
+
 def test_alphazero_device_is_validated_and_resolved_for_training(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

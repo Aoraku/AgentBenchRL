@@ -139,6 +139,18 @@ def compose_config(
         canonical[section] = {**default_values, **dict(override)}
     canonical["algorithm"].update(dict(algorithm_overrides.get(algorithm, {})))
 
+    # Preserve hashes for PPO experiments created before the optional residual
+    # trunk existed. The runtime config supplies zero blocks when this key is
+    # absent; experiments that opt in record their chosen depth canonically.
+    direct_algorithm = raw.get("algorithm", {})
+    selected_algorithm = algorithm_overrides.get(algorithm, {})
+    if (
+        algorithm == "ppo"
+        and "residual_blocks" not in direct_algorithm
+        and "residual_blocks" not in selected_algorithm
+    ):
+        canonical["algorithm"].pop("residual_blocks")
+
     _validate_controls(canonical)
     try:
         ALGORITHM_CONFIGS[algorithm](**canonical["algorithm"])
