@@ -42,6 +42,22 @@ class _VectorEncoder(ModuleWithVectorOutput):
         return self.model(observation)
 
 
+class _ResidualBlock(nn.Module):
+    def __init__(self, channels: int) -> None:
+        super().__init__()
+        self.body = nn.Sequential(
+            nn.Conv2d(channels, channels, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(channels),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(channels, channels, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(channels),
+        )
+        self.activation = nn.ReLU(inplace=True)
+
+    def forward(self, inputs: Tensor) -> Tensor:
+        return self.activation(inputs + self.body(inputs))
+
+
 class _BoardEncoder(ModuleWithVectorOutput):
     def __init__(
         self,
@@ -50,6 +66,7 @@ class _BoardEncoder(ModuleWithVectorOutput):
         scalar_count: int,
         channels: int,
         hidden_size: int,
+        residual_blocks: int,
     ) -> None:
         super().__init__(hidden_size)
         self.plane_shape = plane_shape
@@ -65,6 +82,7 @@ class _BoardEncoder(ModuleWithVectorOutput):
             nn.ReLU(),
             nn.Conv2d(channels, channels, kernel_size=3, padding=1),
             nn.ReLU(),
+            *(_ResidualBlock(channels) for _ in range(residual_blocks)),
         )
         height, width = plane_shape[1:]
         self.projection = nn.Sequential(
@@ -237,6 +255,7 @@ class MaskedActorCritic(nn.Module):
                 scalar_count=scalar_count,
                 channels=config.conv_channels,
                 hidden_size=config.hidden_size,
+                residual_blocks=config.residual_blocks,
             )
 
         self.actor = _MaskedActor(

@@ -298,6 +298,27 @@ def test_checkpoint_restore_recovers_model_optimizer_counters_rng_and_snapshots(
         torch.testing.assert_close(parameter, expected_parameters[name], rtol=0, atol=0)
 
 
+def test_checkpoint_accepts_the_legacy_zero_residual_config(tmp_path) -> None:
+    config = small_config(residual_blocks=0)
+    source = PPOTrainer(CounterGame, config, seed=19)
+    path = tmp_path / "legacy-zero-residual.pt"
+    source.save_checkpoint(path)
+    payload = torch.load(path, map_location="cpu", weights_only=False)
+    del payload["trainer_state"]["ppo_config"]["residual_blocks"]
+    torch.save(payload, path)
+
+    restored = PPOTrainer(CounterGame, config, seed=20)
+    restored.load_checkpoint(path)
+
+    for name, parameter in restored.network.state_dict().items():
+        torch.testing.assert_close(
+            parameter,
+            source.network.state_dict()[name],
+            rtol=0,
+            atol=0,
+        )
+
+
 def test_model_initialization_loads_weights_into_a_fresh_ppo_run(tmp_path) -> None:
     source = PPOTrainer(CounterGame, small_config(), seed=21)
     source.train_iteration()

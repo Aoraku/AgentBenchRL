@@ -19,6 +19,7 @@ class PPOConfig:
     max_grad_norm: float = 0.5
     hidden_size: int = 64
     conv_channels: int = 32
+    residual_blocks: int = 0
     recurrent: bool = False
     gru_hidden_size: int = 64
     vector_envs: int = 2
@@ -49,6 +50,8 @@ class PPOConfig:
             raise ValueError("positive PPO settings must be greater than zero")
         if self.weight_decay < 0.0:
             raise ValueError("weight_decay cannot be negative")
+        if self.residual_blocks < 0:
+            raise ValueError("residual_blocks cannot be negative")
         if not 0.0 <= self.gamma <= 1.0:
             raise ValueError("gamma must be in [0, 1]")
         if not 0.0 <= self.gae_lambda <= 1.0:

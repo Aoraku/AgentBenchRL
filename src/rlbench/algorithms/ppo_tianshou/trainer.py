@@ -621,7 +621,11 @@ class PPOTrainer:
         }
         if not required.issubset(state):
             raise ValueError("PPO checkpoint trainer state is incomplete")
-        if state["ppo_config"] != asdict(self.config):
+        try:
+            checkpoint_config = PPOConfig(**dict(state["ppo_config"]))
+        except (TypeError, ValueError) as exc:
+            raise ValueError("checkpoint PPOConfig is invalid") from exc
+        if asdict(checkpoint_config) != asdict(self.config):
             raise ValueError("checkpoint PPOConfig does not match this trainer")
         expected_game_spec = _game_spec_payload(self.game_spec)
         expected_fingerprint = _game_spec_fingerprint(self.game_spec)

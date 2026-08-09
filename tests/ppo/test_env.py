@@ -372,3 +372,31 @@ def test_vector_and_gru_network_contracts_return_expected_shapes() -> None:
     assert values.shape == (4, 1)
     assert state is not None
     assert state.hidden.shape == (4, 1, 10)
+
+
+def test_board_encoder_supports_a_configurable_residual_trunk() -> None:
+    config = PPOConfig(
+        hidden_size=16,
+        conv_channels=8,
+        residual_blocks=2,
+    )
+    network = MaskedActorCritic.from_game_spec(AlternatingGame.spec, config)
+    observation = {
+        "obs": np.zeros((4, 2), dtype=np.float32),
+        "mask": np.ones((4, 3), dtype=np.bool_),
+    }
+
+    logits, state = network.actor(observation)
+    values = network.critic(observation)
+    parameter_names = set(network.state_dict())
+
+    assert logits.shape == (4, 3)
+    assert values.shape == (4, 1)
+    assert state is None
+    assert any("actor.encoder.convolution.4.body" in name for name in parameter_names)
+    assert any("critic.encoder.convolution.5.body" in name for name in parameter_names)
+
+
+def test_ppo_config_rejects_a_negative_residual_depth() -> None:
+    with pytest.raises(ValueError, match="residual_blocks"):
+        PPOConfig(residual_blocks=-1)
