@@ -647,6 +647,34 @@ def test_protocol_adapter_consumes_official_stream_and_emits_framed_mcts_actions
     assert adapter.game.state.turn == 2
 
 
+def test_protocol_ppo_policy_uses_the_training_action_subset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    masks: list[np.ndarray] = []
+
+    def deployment_mask(game: SnakeGoGame, player: int) -> np.ndarray:
+        assert player == game.current_player()
+        mask = np.zeros(6, dtype=np.bool_)
+        mask[int(np.flatnonzero(game.legal_action_mask())[-1])] = True
+        return mask
+
+    def policy(observation: Observation, mask: np.ndarray) -> int:
+        del observation
+        masks.append(mask.copy())
+        return int(np.flatnonzero(mask)[0])
+
+    monkeypatch.setattr(SnakeGoGame, "training_action_mask", deployment_mask)
+    adapter = OfficialProtocolAdapter(policy)
+    adapter.consume(_official_config(player=0))
+
+    outgoing = adapter.consume(_official_items([(8, 8, 0, 4, 2)]))
+
+    assert masks and masks[0].tolist().count(True) == 1
+    assert outgoing == b"\x00\x00\x00\x01" + bytes(
+        (int(np.flatnonzero(masks[0])[0]) + 1,)
+    )
+
+
 def test_protocol_adapter_rejects_bad_echo_without_advancing_state() -> None:
     """Accepting a mismatched judge echo silently desynchronizes every later decision."""
     adapter = OfficialProtocolAdapter(lambda observation, mask: int(np.flatnonzero(mask)[0]))

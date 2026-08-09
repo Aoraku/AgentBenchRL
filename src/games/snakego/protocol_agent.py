@@ -139,7 +139,7 @@ class OfficialProtocolAdapter:
     def _policy_action(self) -> int:
         assert self.game is not None
         observation = self.game.observe(self.game.current_player())
-        mask = self.game.legal_action_mask()
+        legal_mask = self.game.legal_action_mask()
         search = getattr(self.policy, "search", None)
         if callable(search):
             result = search(
@@ -149,6 +149,12 @@ class OfficialProtocolAdapter:
             )
             return int(result.action)
         select_step = getattr(self.policy, "select_action_step", None)
+        training_action_mask = getattr(self.game, "training_action_mask", None)
+        mask = (
+            training_action_mask(self.game.current_player())
+            if callable(training_action_mask)
+            else legal_mask
+        )
         if callable(select_step):
             decision = select_step(
                 observation,

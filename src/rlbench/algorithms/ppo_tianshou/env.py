@@ -172,6 +172,10 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
             terminal_reward = terminal_outcome
         shaping_reward = self.shaping_beta * (self.gamma * after - before)
         reward = terminal_reward + shaping_reward
+        raw_scores: tuple[float | None, float | None] = (None, None)
+        score = getattr(self.game, "score", None)
+        if self._done and callable(score):
+            raw_scores = (float(score(0)), float(score(1)))
         self._episode_step += 1
         info = {
             "acting_player": player,
@@ -181,6 +185,7 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
             "terminal_reward": terminal_reward,
             "shaping_reward": shaping_reward,
             "combined_reward": reward,
+            "raw_scores": raw_scores,
             "game_steps": self._game_steps,
             "episode_index": self._episode_index,
             "episode_step": self._episode_step,

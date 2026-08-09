@@ -481,7 +481,7 @@ class _AlphaZeroEvaluationPolicy(DeadlineAwareGamePolicy):
         return current.action
 
 
-class _PPOEvaluationPolicy(DeadlineAwareLocalPolicy):
+class _PPOEvaluationPolicy(DeadlineAwareGamePolicy, DeadlineAwareLocalPolicy):
     def __init__(
         self, trainer: PPOTrainer, *, prior_trainer: PPOTrainer | None = None
     ) -> None:
@@ -538,6 +538,21 @@ class _PPOEvaluationPolicy(DeadlineAwareLocalPolicy):
         if deadline is not None and time.monotonic() >= deadline:
             raise ProcessMoveTimeout("PPO move deadline expired before inference")
         return self(observation, legal_mask)
+
+    def act_game_with_deadline(
+        self, game: Any, *, deadline: float | None
+    ) -> int:
+        if deadline is not None and time.monotonic() >= deadline:
+            raise ProcessMoveTimeout("PPO move deadline expired before inference")
+        player = int(game.current_player())
+        observation = game.observe(player)
+        training_action_mask = getattr(game, "training_action_mask", None)
+        mask = (
+            np.asarray(training_action_mask(player), dtype=np.bool_)
+            if callable(training_action_mask)
+            else np.asarray(game.legal_action_mask(), dtype=np.bool_)
+        )
+        return self(observation, mask)
 
 
 class _RandomPolicy:

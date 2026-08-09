@@ -282,6 +282,8 @@ def test_potential_shaping_telescopes_over_controlled_decisions() -> None:
     assert first_info["shaping_reward"] == pytest.approx(0.25)
     assert second_info["shaping_reward"] == pytest.approx(-0.25)
     assert first_reward + second_reward == pytest.approx(0.0)
+    assert first_info["raw_scores"] == (None, None)
+    assert second_info["raw_scores"] == (1.0, 1.0)
     assert first_info["shaping_reward"] + second_info["shaping_reward"] == pytest.approx(
         0.5 * (env.potential(0) - 0.0)
     )

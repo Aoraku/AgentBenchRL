@@ -3,7 +3,9 @@ from __future__ import annotations
 import csv
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
+import numpy as np
 import pytest
 
 import rlbench.cli.main as cli_module
@@ -11,6 +13,7 @@ from rlbench.algorithms.alphazero import AlphaZeroConfig
 from rlbench.cli.main import main
 from rlbench.config import ConfigError, compose_config
 from rlbench.evaluation import build_side_swapped_cases
+from rlbench.game import Observation
 from rlbench.registry import ALGORITHMS, GAMES
 from rlbench.reporting import generate_report
 from rlbench.telemetry import Event, EventLedger
@@ -176,6 +179,47 @@ def test_resume_rejects_a_different_process_opponent(tmp_path: Path) -> None:
                 },
             },
         )
+
+
+def test_ppo_evaluation_uses_the_game_training_action_subset() -> None:
+    observed_masks: list[list[bool]] = []
+
+    class Trainer:
+        def select_action_step(
+            self, observation, mask, *, deterministic, state
+        ) -> SimpleNamespace:
+            del observation, deterministic, state
+            observed_masks.append(mask.tolist())
+            probabilities = np.asarray(mask, dtype=np.float32)
+            probabilities /= probabilities.sum()
+            return SimpleNamespace(
+                action=int(np.flatnonzero(mask)[0]),
+                probabilities=probabilities,
+                state=None,
+            )
+
+    class Game:
+        def current_player(self) -> int:
+            return 0
+
+        def observe(self, player: int) -> Observation:
+            del player
+            return Observation(
+                planes=np.zeros((1, 1, 1), dtype=np.float32),
+                scalars=np.zeros(1, dtype=np.float32),
+            )
+
+        def legal_action_mask(self) -> np.ndarray:
+            return np.asarray([True, True], dtype=np.bool_)
+
+        def training_action_mask(self, player: int) -> np.ndarray:
+            del player
+            return np.asarray([False, True], dtype=np.bool_)
+
+    policy = cli_module._PPOEvaluationPolicy(Trainer())
+
+    assert policy.act_game_with_deadline(Game(), deadline=None) == 1
+    assert observed_masks == [[False, True]]
 
 
 def test_config_composition_is_deterministic_strict_and_path_aware(
