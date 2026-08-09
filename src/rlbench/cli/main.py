@@ -14,7 +14,7 @@ import time
 from collections import Counter
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Iterator, Mapping, Sequence
 from uuid import UUID, uuid4
 
 import numpy as np
@@ -238,55 +238,38 @@ def _train_command(
             _restore_event_backed_budgets(trainer, ledger=ledger, run_id=run_id)
         elif initialize is not None:
             trainer.initialize_model(Path(initialize).resolve())
-        _run_training(trainer, composed)
-        elapsed = time.monotonic() - started
-        trainer.budgets.add_wall_seconds(elapsed, "learning")
-        if sample_resources:
-            sampler.sample("learning")
-        totals = sampler.totals()
+        total_batches = int(
+            composed.canonical["training"][
+                "generations" if algorithm == "alphazero" else "iterations"
+            ]
+        )
+        checkpoint_every = int(composed.canonical["training"]["checkpoint_every"])
+        last_accounted = started
+        checkpoint_path: Path | None = None
+        checkpoint_hash: str | None = None
         counter = int(getattr(trainer, counter_name))
-        checkpoints = run_dir / "checkpoints"
-        checkpoints.mkdir(parents=True, exist_ok=True)
-        checkpoint_path = checkpoints / f"checkpoint_{counter:06d}.pt"
-        _save_checkpoint_exclusive(trainer, checkpoint_path)
-        ledger.append_budget_snapshot(run_id=run_id, counters=trainer.budgets)
-        budgets = trainer.budgets.as_dict()
-        invocation_learning_gpu_hours = (
-            totals["learning"].allocated_gpu_hours if sample_resources else None
-        )
-        learning_gpu_hours = _sum_optional_hours(
-            prior_gpu_hours["learning"], invocation_learning_gpu_hours
-        )
-        evaluation_gpu_hours = prior_gpu_hours["evaluation"]
-        total_gpu_hours = _sum_optional_hours(
-            learning_gpu_hours, evaluation_gpu_hours
-        )
-        checkpoint_hash = _sha256_file(checkpoint_path)
-        ledger.append(
-            Event(
-                event_type="checkpoint_saved",
+        for batch_index, counter in enumerate(_run_training(trainer, composed), 1):
+            current = time.monotonic()
+            trainer.budgets.add_wall_seconds(current - last_accounted, "learning")
+            last_accounted = current
+            if counter % checkpoint_every and batch_index != total_batches:
+                continue
+            checkpoint_path, checkpoint_hash = _record_training_checkpoint(
+                trainer=trainer,
+                algorithm=algorithm,
+                counter_name=counter_name,
+                counter=counter,
+                run_dir=run_dir,
                 run_id=run_id,
-                stage="learning",
-                payload={
-                    "algorithm": algorithm,
-                    "checkpoint_index": counter,
-                    counter_name: counter,
-                    "checkpoint": str(checkpoint_path.relative_to(run_dir)),
-                    "checkpoint_hash": checkpoint_hash,
-                    "manifest_hash": manifest["manifest_hash"],
-                    "env_steps": budgets["total"]["env_steps"],
-                    "optimizer_steps": budgets["total"]["optimizer_steps"],
-                    "mcts_simulations": budgets["total"]["mcts_simulations"],
-                    "learning_wall_seconds": budgets["learning"]["wall_seconds"],
-                    "evaluation_wall_seconds": budgets["evaluation"]["wall_seconds"],
-                    "wall_seconds": budgets["total"]["wall_seconds"],
-                    "learning_gpu_hours": learning_gpu_hours,
-                    "evaluation_gpu_hours": evaluation_gpu_hours,
-                    "gpu_hours": total_gpu_hours,
-                    "budgets": budgets,
-                },
+                manifest=manifest,
+                ledger=ledger,
+                sampler=sampler,
+                sample_resources=sample_resources,
+                prior_gpu_hours=prior_gpu_hours,
             )
-        )
+        elapsed = time.monotonic() - started
+        if checkpoint_path is None or checkpoint_hash is None:
+            raise RuntimeError("training produced no checkpoint")
         ledger.append(
             Event(
                 event_type="run_finished",
@@ -375,7 +358,7 @@ def _alphazero_device(config: AlphaZeroConfig) -> str:
     return config.device
 
 
-def _run_training(trainer: Any, config: ComposedConfig) -> None:
+def _run_training(trainer: Any, config: ComposedConfig) -> Iterator[int]:
     controls = config.canonical["training"]
     if config.algorithm == "alphazero":
         factory = game_factory(config.game, config.canonical["game"])
@@ -399,8 +382,10 @@ def _run_training(trainer: Any, config: ComposedConfig) -> None:
                         },
                     )
                 )
+            yield int(metrics.generation)
         return
-    for metrics in trainer.train(iterations=int(controls["iterations"])):
+    for _ in range(int(controls["iterations"])):
+        metrics = trainer.train_iteration()
         if trainer.ledger is not None:
             trainer.ledger.append(
                 Event(
@@ -414,6 +399,67 @@ def _run_training(trainer: Any, config: ComposedConfig) -> None:
                     },
                 )
             )
+        yield int(metrics.iteration)
+
+
+def _record_training_checkpoint(
+    *,
+    trainer: Any,
+    algorithm: str,
+    counter_name: str,
+    counter: int,
+    run_dir: Path,
+    run_id: str,
+    manifest: Mapping[str, Any],
+    ledger: EventLedger,
+    sampler: ResourceSampler,
+    sample_resources: bool,
+    prior_gpu_hours: Mapping[str, float | None],
+) -> tuple[Path, str]:
+    if sample_resources:
+        sampler.sample("learning")
+    totals = sampler.totals()
+    checkpoints = run_dir / "checkpoints"
+    checkpoints.mkdir(parents=True, exist_ok=True)
+    checkpoint_path = checkpoints / f"checkpoint_{counter:06d}.pt"
+    _save_checkpoint_exclusive(trainer, checkpoint_path)
+    ledger.append_budget_snapshot(run_id=run_id, counters=trainer.budgets)
+    budgets = trainer.budgets.as_dict()
+    invocation_learning_gpu_hours = (
+        totals["learning"].allocated_gpu_hours if sample_resources else None
+    )
+    learning_gpu_hours = _sum_optional_hours(
+        prior_gpu_hours["learning"], invocation_learning_gpu_hours
+    )
+    evaluation_gpu_hours = prior_gpu_hours["evaluation"]
+    total_gpu_hours = _sum_optional_hours(learning_gpu_hours, evaluation_gpu_hours)
+    checkpoint_hash = _sha256_file(checkpoint_path)
+    ledger.append(
+        Event(
+            event_type="checkpoint_saved",
+            run_id=run_id,
+            stage="learning",
+            payload={
+                "algorithm": algorithm,
+                "checkpoint_index": counter,
+                counter_name: counter,
+                "checkpoint": str(checkpoint_path.relative_to(run_dir)),
+                "checkpoint_hash": checkpoint_hash,
+                "manifest_hash": manifest["manifest_hash"],
+                "env_steps": budgets["total"]["env_steps"],
+                "optimizer_steps": budgets["total"]["optimizer_steps"],
+                "mcts_simulations": budgets["total"]["mcts_simulations"],
+                "learning_wall_seconds": budgets["learning"]["wall_seconds"],
+                "evaluation_wall_seconds": budgets["evaluation"]["wall_seconds"],
+                "wall_seconds": budgets["total"]["wall_seconds"],
+                "learning_gpu_hours": learning_gpu_hours,
+                "evaluation_gpu_hours": evaluation_gpu_hours,
+                "gpu_hours": total_gpu_hours,
+                "budgets": budgets,
+            },
+        )
+    )
+    return checkpoint_path, checkpoint_hash
 
 
 class _AlphaZeroEvaluationPolicy(DeadlineAwareGamePolicy):

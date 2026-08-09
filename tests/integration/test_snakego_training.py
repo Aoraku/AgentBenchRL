@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from rlbench.algorithms.checkpoint import PolicyCheckpoint
 from rlbench.cli.main import main
 from rlbench.registry import game_factory
 from rlbench.telemetry import EventLedger
@@ -60,6 +61,41 @@ def test_registered_game_factory_round_trips_across_spawn_boundary() -> None:
     game.reset(17)
     assert game.max_round == 3
     assert game.current_player() == 0
+
+
+def test_ppo_checkpoints_capture_each_completed_iteration(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    config = _smoke_config(tmp_path / "periodic.yaml", "ppo")
+    config.write_text(
+        config.read_text(encoding="utf-8").replace("  iterations: 1\n", "  iterations: 2\n"),
+        encoding="utf-8",
+    )
+    run = tmp_path / "periodic-run"
+
+    assert main(
+        [
+            "train",
+            "snakego",
+            "--algo",
+            "ppo",
+            "--config",
+            str(config),
+            "--output",
+            str(run),
+        ]
+    ) == 0
+    capsys.readouterr()
+
+    first = PolicyCheckpoint.load(run / "checkpoints/checkpoint_000001.pt")
+    second = PolicyCheckpoint.load(run / "checkpoints/checkpoint_000002.pt")
+    assert first.trainer_state["iteration"] == 1
+    assert second.trainer_state["iteration"] == 2
+    assert [
+        event.payload["checkpoint_index"]
+        for event in EventLedger(run / "events.jsonl").read()
+        if event.event_type == "checkpoint_saved"
+    ] == [1, 2]
 
 
 @pytest.mark.parametrize(
