@@ -112,14 +112,14 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
         self._close_game_aware_opponent()
         self.game = self.game_factory()
         self.game.reset(game_seed)
+        self._episode_index += 1
         self.controlled_player = (
-            self.game.current_player()
+            self._episode_index % 2
             if self._configured_player is None
             else self._configured_player
         )
         self._done = False
         self._game_steps = 0
-        self._episode_index += 1
         self._episode_step = 0
         reset_opponent = getattr(self.opponent, "reset", None)
         if callable(reset_opponent):

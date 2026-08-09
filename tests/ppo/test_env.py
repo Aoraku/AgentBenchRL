@@ -96,6 +96,18 @@ def test_reset_and_step_observe_the_current_controlled_player() -> None:
     assert info["acting_player"] == 0
 
 
+def test_unspecified_controlled_player_alternates_roles_between_episodes() -> None:
+    env = GymGameEnv(factory(), opponent=lambda obs, mask: int(np.flatnonzero(mask)[0]))
+
+    first, first_info = env.reset(seed=7)
+    second, second_info = env.reset(seed=8)
+
+    assert first_info["controlled_player"] == 0
+    assert first["obs"].tolist() == [0.0, 0.0]
+    assert second_info["controlled_player"] == 1
+    assert second["obs"].tolist() == [1.0, 1.0]
+
+
 def test_opponent_advances_with_its_own_observation_and_legal_mask() -> None:
     """Skipping opponent turns or passing the learner mask corrupts transitions."""
     calls: list[tuple[list[float], list[bool]]] = []

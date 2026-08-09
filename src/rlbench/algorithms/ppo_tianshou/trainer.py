@@ -446,7 +446,7 @@ class PPOTrainer:
                 learner_state: Batch | None = None
                 env = GymGameEnv(
                     self.game_factory,
-                    controlled_player=0,
+                    controlled_player=episode % 2,
                     opponent=opponent,
                     shaping_beta=self.config.shaping_beta,
                     gamma=self.config.gamma,
@@ -657,7 +657,7 @@ class PPOTrainer:
             env_functions.append(
                 lambda opponent=opponent, transition_sink=transition_sink: GymGameEnv(
                     self.game_factory,
-                    controlled_player=0,
+                    controlled_player=None,
                     opponent=opponent,
                     shaping_beta=self.config.shaping_beta,
                     gamma=self.config.gamma,
