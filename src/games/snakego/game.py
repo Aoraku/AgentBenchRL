@@ -104,6 +104,26 @@ class SnakeGoGame:
         margin = effective_score(player) - effective_score(1 - player)
         return float(np.clip(margin / 513.0, -1.0, 1.0))
 
+    def training_action_mask(self, player: int) -> NDArray[np.bool_]:
+        """Reject unrewarded deaths while retaining scoring solidifications."""
+        if player != self.current_player():
+            raise ValueError("training action mask requires the acting player")
+        legal = self.legal_action_mask()
+        snake_id = self.engine.current_snake.id
+        wall_count = int(np.count_nonzero(self.state.walls == player))
+        safe = np.zeros_like(legal)
+        for action in np.flatnonzero(legal):
+            branch = self.clone()
+            branch.step(int(action))
+            productive_solidification = (
+                int(np.count_nonzero(branch.state.walls == player)) > wall_count
+            )
+            safe[action] = (
+                branch.state.snake(snake_id) is not None
+                or productive_solidification
+            )
+        return safe if np.any(safe) else legal
+
     @property
     def official_winner(self) -> int | None:
         return self.engine.official_winner

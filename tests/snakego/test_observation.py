@@ -243,6 +243,42 @@ def test_training_potential_credits_banked_growth_before_it_is_realized() -> Non
     assert potential0 == pytest.approx(-potential1)
 
 
+def test_training_action_mask_rejects_unrewarded_boundary_deaths() -> None:
+    game = SnakeGoGame()
+    game.reset(7)
+
+    mask = game.training_action_mask(0)
+
+    assert mask.tolist() == [True, False, False, True, False, False]
+
+
+def test_training_action_mask_retains_scoring_solidification() -> None:
+    game = SnakeGoGame.from_state(
+        SnakeGoState(
+            turn=20,
+            current_player=0,
+            max_round=512,
+            snakes=[
+                SnakeState(
+                    0,
+                    0,
+                    [(2, 2), (2, 1), (1, 1), (1, 2), (0, 2)],
+                ),
+                SnakeState(1, 1, [(15, 0)]),
+            ],
+            phase_snake_ids=[0],
+        )
+    )
+    branch = game.clone()
+    branch.step(2)
+    assert branch.state.snake(0) is None
+    assert np.count_nonzero(branch.state.walls == 0) > 0
+
+    mask = game.training_action_mask(0)
+
+    assert mask[2]
+
+
 def test_scalar_inventory_distinguishes_split_items_from_railguns() -> None:
     """Collapsing item types prevents a policy from observing official inventory state."""
     item = ItemState(
