@@ -22,6 +22,29 @@ from .spec import (
 from .state import BOARD_SIZE, EMPTY, SnakeGoState
 
 
+def _reachable_space(game: SnakeGoGame, snake_id: int) -> int:
+    snake = game.state.snake(snake_id)
+    if snake is None:
+        return 0
+    blocked = (game.state.walls != EMPTY) | (game.state.snake_grid != EMPTY)
+    start = snake.coordinates[0]
+    blocked[start] = False
+    seen = {start}
+    stack = [start]
+    while stack:
+        x, y = stack.pop()
+        for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if (
+                0 <= nx < BOARD_SIZE
+                and 0 <= ny < BOARD_SIZE
+                and not blocked[nx, ny]
+                and (nx, ny) not in seen
+            ):
+                seen.add((nx, ny))
+                stack.append((nx, ny))
+    return len(seen)
+
+
 class SnakeGoGame:
     """Framework-neutral fixed-action SnakeGo game."""
 
@@ -109,18 +132,31 @@ class SnakeGoGame:
             raise ValueError("training action mask requires the acting player")
         legal = self.legal_action_mask()
         snake_id = self.engine.current_snake.id
+        snake_length = len(self.engine.current_snake.coordinates)
         wall_count = int(np.count_nonzero(self.state.walls == player))
         safe = np.zeros_like(legal)
+        scoring_actions: list[int] = []
+        survivor_spaces: dict[int, int] = {}
         for action in np.flatnonzero(legal):
             branch = self.clone()
             branch.step(int(action))
             productive_solidification = (
                 int(np.count_nonzero(branch.state.walls == player)) > wall_count
             )
-            safe[action] = (
-                branch.state.snake(snake_id) is not None
-                or productive_solidification
-            )
+            if productive_solidification:
+                scoring_actions.append(int(action))
+                safe[action] = True
+            elif branch.state.snake(snake_id) is not None:
+                survivor_spaces[int(action)] = _reachable_space(branch, snake_id)
+                safe[action] = True
+        if survivor_spaces:
+            maximum_space = max(survivor_spaces.values())
+            required_space = min(maximum_space, max(12, snake_length))
+            safe[:] = False
+            safe[scoring_actions] = True
+            for action, space in survivor_spaces.items():
+                if space >= required_space:
+                    safe[action] = True
         return safe if np.any(safe) else legal
 
     @property

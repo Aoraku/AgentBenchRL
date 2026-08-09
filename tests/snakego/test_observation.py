@@ -285,6 +285,34 @@ def test_training_action_mask_retains_scoring_solidification() -> None:
     assert mask[2]
 
 
+def test_training_action_mask_avoids_a_small_reachable_pocket() -> None:
+    walls = np.full((16, 16), -1, dtype=np.int8)
+    walls[3, 1] = 2
+    walls[2, 0] = 2
+    walls[2, 2] = 2
+    game = SnakeGoGame.from_state(
+        SnakeGoState(
+            turn=20,
+            current_player=0,
+            max_round=512,
+            snakes=[
+                SnakeState(0, 0, [(1, 1), (0, 1), (0, 0)]),
+                SnakeState(1, 1, [(15, 15)]),
+            ],
+            walls=walls,
+            phase_snake_ids=[0],
+        )
+    )
+    trapped = game.clone()
+    trapped.step(0)
+    assert trapped.state.snake(0) is not None
+
+    mask = game.training_action_mask(0)
+
+    assert not mask[0]
+    assert mask[1]
+
+
 def test_scalar_inventory_distinguishes_split_items_from_railguns() -> None:
     """Collapsing item types prevents a policy from observing official inventory state."""
     item = ItemState(
