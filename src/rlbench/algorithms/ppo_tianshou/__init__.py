@@ -1,7 +1,13 @@
 """Public boundary for the framework-owned Tianshou PPO backend."""
 
 from .config import PPOConfig
-from .env import GymGameEnv, OpponentPolicy
+from .env import (
+    ActionMapper,
+    ActionPrior,
+    GymGameEnv,
+    OpponentPolicy,
+    PrioritizedActionMapper,
+)
 from .network import MaskedActorCritic
 from .trainer import (
     OpponentSnapshot,
@@ -14,6 +20,8 @@ from .trainer import (
 )
 
 __all__ = [
+    "ActionMapper",
+    "ActionPrior",
     "GymGameEnv",
     "MaskedActorCritic",
     "OpponentPolicy",
@@ -25,4 +33,5 @@ __all__ = [
     "PPORecurrentState",
     "PPOTrainer",
     "PPOTrainingMetrics",
+    "PrioritizedActionMapper",
 ]

@@ -168,6 +168,28 @@ def test_expert_trajectory_requires_a_complete_legal_game() -> None:
         )
 
 
+def test_expert_trajectory_can_train_only_the_declared_teacher_side() -> None:
+    trainer = _trainer(TicTacToe(), learning_rate=0.02)
+
+    result = trainer.distill_expert_trajectories(
+        TicTacToe,
+        (
+            ExpertTrajectory(
+                seed=101,
+                actions=(0, 3, 1, 4, 2),
+                train_players=(0,),
+            ),
+        ),
+        training_steps=0,
+        fresh_replay=True,
+    )
+
+    samples = tuple(trainer.replay._samples)
+    assert result.replay_samples == 3
+    assert {sample.player for sample in samples} == {0}
+    assert {sample.outcome for sample in samples} == {1.0}
+
+
 def test_checkpoint_restores_identical_logits_rng_and_counters(tmp_path) -> None:
     """A partial resume would change inference, randomness, or accounting."""
     torch.manual_seed(11)

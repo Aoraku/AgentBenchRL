@@ -165,6 +165,33 @@ def test_constructs_the_pinned_tianshou_two_ppo_algorithm() -> None:
     assert trainer.algorithm.critic is trainer.network.critic
 
 
+def test_action_mapper_runs_through_vector_collection_and_snapshot_self_play() -> None:
+    calls = 0
+
+    def mapper(game: CounterGame, player: int) -> tuple[int, ...]:
+        nonlocal calls
+        del player
+        calls += 1
+        return tuple(
+            reversed(
+                [int(action) for action in np.flatnonzero(game.legal_action_mask())]
+            )
+        )
+
+    trainer = PPOTrainer(
+        CounterGame,
+        small_config(vector_envs=2, episodes_per_collect=4),
+        seed=11,
+        action_mapper=mapper,
+        action_mapper_id="reverse-legal-v1",
+    )
+
+    metrics = trainer.train_iteration()
+
+    assert metrics.episodes == 4
+    assert calls > 0
+
+
 def test_stateful_process_opponent_requires_single_vector_environment() -> None:
     """One process cannot safely carry independent state for concurrent games."""
 
@@ -440,6 +467,35 @@ def test_checkpoint_rejects_game_fingerprint_mismatch_without_mutation(tmp_path)
     assert target.iteration == 0
     for name, parameter in target.network.state_dict().items():
         torch.testing.assert_close(parameter, before[name], rtol=0, atol=0)
+
+
+def test_checkpoint_binds_residual_action_mapper_identity(tmp_path) -> None:
+    def mapper(game: CounterGame, player: int) -> tuple[int, ...]:
+        del player
+        return tuple(int(action) for action in np.flatnonzero(game.legal_action_mask()))
+
+    source = PPOTrainer(
+        CounterGame,
+        small_config(),
+        seed=35,
+        action_mapper=mapper,
+        action_mapper_id="legal-prior-v1",
+    )
+    path = tmp_path / "mapped.pt"
+    source.save_checkpoint(path)
+
+    matching = PPOTrainer(
+        CounterGame,
+        small_config(),
+        seed=36,
+        action_mapper=mapper,
+        action_mapper_id="legal-prior-v1",
+    )
+    matching.load_checkpoint(path)
+
+    mismatched = PPOTrainer(CounterGame, small_config(), seed=37)
+    with pytest.raises(ValueError, match="action mapper"):
+        mismatched.load_checkpoint(path)
 
 
 def test_evaluation_is_deterministic_and_does_not_charge_learning_budget() -> None:

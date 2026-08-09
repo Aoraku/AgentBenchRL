@@ -31,7 +31,7 @@ from rlbench.league import LeagueState
 from rlbench.telemetry import BudgetCounters, Event, EventLedger
 
 from .config import PPOConfig
-from .env import GymGameEnv, OpponentPolicy
+from .env import ActionMapper, GymGameEnv, OpponentPolicy
 from .network import MaskedActorCritic
 
 
@@ -198,6 +198,8 @@ class PPOTrainer:
         event_callback: EventCallback | None = None,
         opponent: OpponentPolicy | None = None,
         opponent_id: str = "opponent",
+        action_mapper: ActionMapper | None = None,
+        action_mapper_id: str | None = None,
     ) -> None:
         self.tianshou_version = version("tianshou")
         if self.tianshou_version != "2.0.1":
@@ -206,6 +208,10 @@ class PPOTrainer:
             raise ValueError("run_id must be non-empty")
         if not opponent_id:
             raise ValueError("opponent_id must be non-empty")
+        if (action_mapper is None) != (action_mapper_id is None):
+            raise ValueError("action_mapper and action_mapper_id must be set together")
+        if action_mapper_id is not None and not action_mapper_id:
+            raise ValueError("action_mapper_id must be non-empty")
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
@@ -220,7 +226,7 @@ class PPOTrainer:
         if self.network.action_count != len(self.game_spec.action_names):
             raise ValueError("network action count does not match the game")
 
-        probe_env = GymGameEnv(game_factory)
+        probe_env = GymGameEnv(game_factory, action_mapper=action_mapper)
         self.policy = RecurrentDiscreteActorPolicy(
             actor=self.network.actor,
             action_space=Discrete(len(self.game_spec.action_names)),
@@ -255,6 +261,8 @@ class PPOTrainer:
         self.event_callback = event_callback
         self.external_opponent = opponent
         self.opponent_id = opponent_id
+        self.action_mapper = action_mapper
+        self.action_mapper_id = action_mapper_id
         if (
             opponent is not None
             and callable(getattr(opponent, "act_game_process", None))
@@ -278,6 +286,8 @@ class PPOTrainer:
             self.game_spec
         ):
             raise ValueError("initial checkpoint game specification does not match")
+        if state.get("action_mapper_id") != self.action_mapper_id:
+            raise ValueError("initial checkpoint action mapper does not match")
         checkpoint.validate_restore(model=self.network)
         self.network.load_state_dict(checkpoint.model_state, strict=True)
         self.opponent_snapshots[0].network.load_state_dict(
@@ -481,6 +491,7 @@ class PPOTrainer:
                     shaping_beta=self.config.shaping_beta,
                     gamma=self.config.gamma,
                     score_scale=self.config.score_scale,
+                    action_mapper=self.action_mapper,
                 )
                 gym_observation, _ = env.reset(seed=seed + episode)
                 done = False
@@ -570,6 +581,7 @@ class PPOTrainer:
                 "ppo_config": asdict(self.config),
                 "game_spec": _game_spec_payload(self.game_spec),
                 "game_spec_fingerprint": _game_spec_fingerprint(self.game_spec),
+                "action_mapper_id": self.action_mapper_id,
                 "iteration": self.iteration,
                 "optimizer_steps": self.optimizer_steps,
                 "budgets": self.budgets.as_dict(),
@@ -635,6 +647,8 @@ class PPOTrainer:
             or state["game_spec_fingerprint"] != expected_fingerprint
         ):
             raise ValueError("checkpoint game specification does not match this trainer")
+        if state.get("action_mapper_id") != self.action_mapper_id:
+            raise ValueError("checkpoint action mapper does not match this trainer")
         checkpoint.validate_restore(model=self.network, optimizer=self.optimizer)
         iteration = _nonnegative_int(state["iteration"], "iteration")
         optimizer_steps = _nonnegative_int(
@@ -709,6 +723,7 @@ class PPOTrainer:
                     gamma=self.config.gamma,
                     score_scale=self.config.score_scale,
                     opponent_training_actions=not use_external,
+                    action_mapper=self.action_mapper,
                     transition_callback=transition_sink,
                 )
             )

@@ -72,6 +72,30 @@ also expose `clone`, `symmetries`, `encode_state_id`, `score`, or
 `training_potential` for backend-specific acceleration, reward shaping, and
 diagnostics.
 
+An optional search or scripted action prior can be placed at PPO residual
+action zero without changing the game rules or trainer:
+
+```python
+from rlbench.algorithms.ppo_tianshou import PPOTrainer, PrioritizedActionMapper
+
+mapper = PrioritizedActionMapper(
+    lambda game, player: search_policy(game, player)
+)
+trainer = PPOTrainer(
+    game_factory,
+    config,
+    action_mapper=mapper,
+    action_mapper_id="my-search-v1",
+)
+```
+
+The mapper orders the remaining permitted actions automatically. PPO learners
+and neural self-play snapshots use residual coordinates, while official
+process opponents continue to exchange canonical game actions.
+The stable mapper ID is stored in every PPO checkpoint and must match on
+resume, preventing a residual policy from being loaded with different action
+semantics.
+
 ## Train and resume
 
 AlphaZero strength run:
@@ -171,13 +195,24 @@ from rlbench.algorithms.alphazero import ExpertTrajectory
 
 trainer.distill_expert_trajectories(
     game_factory,
-    [ExpertTrajectory(seed=101, actions=(0, 3, 1, 4, 2))],
+    [
+        ExpertTrajectory(
+            seed=101,
+            actions=(0, 3, 1, 4, 2),
+            train_players=(0,),
+        )
+    ],
     training_steps=8192,
     fresh_replay=True,
     opening_moves=8,
     opening_weight=4.0,
 )
 ```
+
+`train_players` selects which side supplied the expert decisions while the
+complete action sequence still reconstructs the exact terminal value. This
+allows a stronger search teacher to play either seat against curriculum
+opponents without cloning the weaker opponent's policy targets.
 
 ## Build SnakeGo human populations
 

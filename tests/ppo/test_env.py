@@ -125,6 +125,67 @@ def test_opponent_advances_with_its_own_observation_and_legal_mask() -> None:
     assert env.game.moves == [(0, 0), (1, 1)]
 
 
+def test_action_mapper_uses_residual_coordinates_for_both_neural_players() -> None:
+    calls: list[tuple[int, tuple[int, ...]]] = []
+
+    def mapper(game: AlternatingGame, player: int) -> tuple[int, ...]:
+        mapping = (
+            tuple(int(action) for action in np.flatnonzero(game.legal_action_mask()))
+        )[::-1]
+        calls.append((player, mapping))
+        return mapping
+
+    opponent_masks: list[list[bool]] = []
+
+    def opponent(observation: Observation, mask: np.ndarray) -> int:
+        del observation
+        opponent_masks.append(mask.tolist())
+        return 0
+
+    env = GymGameEnv(
+        factory(),
+        controlled_player=0,
+        opponent=opponent,
+        action_mapper=mapper,
+    )
+
+    initial, _ = env.reset(seed=0)
+    _, _, _, _, info = env.step(0)
+
+    assert initial["mask"].tolist() == [True, True, False]
+    assert opponent_masks == [[True, True, False]]
+    assert env.game.moves == [(0, 2), (1, 2)]
+    assert info["policy_action"] == 0
+    assert info["game_action"] == 2
+    assert calls == [(0, (2, 0)), (1, (2, 1)), (0, (2, 0))]
+
+
+def test_action_mapper_does_not_remap_official_process_opponent_actions() -> None:
+    opponent = GameProcessOpponent()
+
+    def mapper(game: AlternatingGame, player: int) -> tuple[int, ...]:
+        del player
+        return tuple(
+            reversed(
+                [int(action) for action in np.flatnonzero(game.legal_action_mask())]
+            )
+        )
+
+    env = GymGameEnv(
+        factory(terminal_after=2),
+        controlled_player=0,
+        opponent=opponent,  # type: ignore[arg-type]
+        action_mapper=mapper,
+    )
+
+    env.reset(seed=0)
+    env.step(0)
+
+    assert env.game.moves == [(0, 2), (1, 1)]
+    assert ("observe", 0, 2, 1) in opponent.events
+    assert ("observe", 1, 1, 2) in opponent.events
+
+
 class GameProcessOpponent:
     def __init__(self) -> None:
         self.events: list[tuple[object, ...]] = []

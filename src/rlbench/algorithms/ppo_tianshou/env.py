@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any, Protocol
 
@@ -19,6 +20,38 @@ class OpponentPolicy(Protocol):
     def __call__(
         self, observation: Observation, legal_mask: NDArray[np.bool_]
     ) -> int: ...
+
+
+class ActionMapper(Protocol):
+    """Map compact PPO action indices to ordered legal game actions."""
+
+    def __call__(self, game: DiscreteGame, player: int) -> Sequence[int]: ...
+
+
+class ActionPrior(Protocol):
+    """Choose one preferred legal game action for the acting player."""
+
+    def __call__(self, game: DiscreteGame, player: int) -> int: ...
+
+
+@dataclass(frozen=True, slots=True)
+class PrioritizedActionMapper:
+    """Place a search or scripted prior at residual action zero."""
+
+    prior: ActionPrior
+    use_training_mask: bool = True
+
+    def __call__(self, game: DiscreteGame, player: int) -> tuple[int, ...]:
+        legal_mask = np.asarray(game.legal_action_mask(), dtype=np.bool_)
+        permitted = legal_mask
+        training_action_mask = getattr(game, "training_action_mask", None)
+        if self.use_training_mask and callable(training_action_mask):
+            permitted = np.asarray(training_action_mask(player), dtype=np.bool_)
+        actions = tuple(int(action) for action in np.flatnonzero(permitted))
+        prior = int(self.prior(game, player))
+        if prior not in actions:
+            raise ValueError("action prior must select a permitted game action")
+        return (prior, *(action for action in actions if action != prior))
 
 
 TransitionCallback = Callable[[Mapping[str, Any]], None]
@@ -41,6 +74,7 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
         opponent_id: str = "opponent",
         opponent_move_seconds: float | None = None,
         opponent_training_actions: bool = False,
+        action_mapper: ActionMapper | None = None,
         transition_callback: TransitionCallback | None = None,
     ) -> None:
         super().__init__()
@@ -74,12 +108,15 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
         self.opponent_id = opponent_id
         self.opponent_move_seconds = opponent_move_seconds
         self.opponent_training_actions = opponent_training_actions
+        self.action_mapper = action_mapper
         self.transition_callback = transition_callback
         self._done = False
         self._game_steps = 0
         self._episode_index = -1
         self._episode_step = 0
         self._opponent_started = False
+        self._cached_action_mapping: tuple[int, ...] | None = None
+        self._cached_action_mapping_player: int | None = None
 
         observation_spec = self.game.spec.observation_spec
         self._observation_size = (
@@ -125,6 +162,7 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
         self._done = False
         self._game_steps = 0
         self._episode_step = 0
+        self._clear_action_mapping()
         reset_opponent = getattr(self.opponent, "reset", None)
         if callable(reset_opponent):
             reset_opponent()
@@ -155,12 +193,10 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
         if self._done:
             raise RuntimeError("cannot step a terminal environment")
         player = self._require_controlled_turn()
-        action = int(action)
-        legal_mask = self.game.legal_action_mask()
-        if action < 0 or action >= self.action_space.n or not bool(legal_mask[action]):
-            raise ValueError(f"illegal controlled action: {action}")
+        policy_action = int(action)
+        game_action = self._game_action(player, policy_action)
         before = self.potential(player)
-        records = [self._apply(action)]
+        records = [self._apply(game_action)]
         if not self._done:
             records.extend(self._advance_opponent())
         after = self.potential(player)
@@ -184,6 +220,8 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
         info = {
             "acting_player": player,
             "controlled_player": player,
+            "policy_action": policy_action,
+            "game_action": game_action,
             "opponent_steps": len(records) - 1,
             "terminal_outcome": terminal_outcome,
             "terminal_reward": terminal_reward,
@@ -235,10 +273,20 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
                     )
                 )
             else:
-                action = (
-                    int(self.opponent(observation, permitted.copy()))
+                mapping = self._action_mapping(self.game.current_player())
+                policy_mask = permitted
+                if mapping is not None:
+                    policy_mask = np.zeros(self.action_space.n, dtype=np.bool_)
+                    policy_mask[: len(mapping)] = True
+                policy_action = (
+                    int(self.opponent(observation, policy_mask.copy()))
                     if self.opponent
-                    else int(legal[0])
+                    else int(np.flatnonzero(policy_mask)[0])
+                )
+                action = (
+                    self._mapped_action(mapping, policy_action)
+                    if mapping is not None
+                    else policy_action
                 )
             if action < 0 or action >= self.action_space.n or not bool(permitted[action]):
                 raise ValueError(f"opponent selected illegal action: {action}")
@@ -247,6 +295,7 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
 
     def _apply(self, action: int) -> StepRecord:
         record = self.game.step(action)
+        self._clear_action_mapping()
         observe_action = getattr(self.opponent, "observe_action", None)
         if self._opponent_started and callable(observe_action):
             observe_action(self.game, record.player, record.action)
@@ -322,20 +371,75 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
             legal_mask = np.asarray(self.game.legal_action_mask(), dtype=np.bool_)
             if legal_mask.shape != (self.action_space.n,):
                 raise ValueError("legal action mask does not match the action space")
-            training_action_mask = getattr(self.game, "training_action_mask", None)
-            mask = (
-                np.asarray(
-                    training_action_mask(self.controlled_player), dtype=np.bool_
-                ).copy()
-                if callable(training_action_mask)
-                else legal_mask.copy()
-            )
+            mapping = self._action_mapping(self.controlled_player)
+            if mapping is not None:
+                mask[: len(mapping)] = True
+            else:
+                training_action_mask = getattr(
+                    self.game, "training_action_mask", None
+                )
+                mask = (
+                    np.asarray(
+                        training_action_mask(self.controlled_player), dtype=np.bool_
+                    ).copy()
+                    if callable(training_action_mask)
+                    else legal_mask.copy()
+                )
             if mask.shape != (self.action_space.n,):
                 raise ValueError("training action mask does not match the action space")
-            if np.any(mask & ~legal_mask):
+            if mapping is None and np.any(mask & ~legal_mask):
                 raise ValueError("game training action mask must be a legal subset")
             if not np.any(mask):
                 raise ValueError("game training action mask must retain one action")
         if mask.shape != (self.action_space.n,):
             raise ValueError("legal action mask does not match the action space")
         return {"obs": flat, "mask": mask}
+
+    def _game_action(self, player: int, policy_action: int) -> int:
+        mapping = self._action_mapping(player)
+        if mapping is not None:
+            return self._mapped_action(mapping, policy_action)
+        legal_mask = np.asarray(self.game.legal_action_mask(), dtype=np.bool_)
+        if (
+            policy_action < 0
+            or policy_action >= self.action_space.n
+            or not bool(legal_mask[policy_action])
+        ):
+            raise ValueError(f"illegal controlled action: {policy_action}")
+        return policy_action
+
+    def _action_mapping(self, player: int) -> tuple[int, ...] | None:
+        if self.action_mapper is None:
+            return None
+        if self._cached_action_mapping_player == player:
+            return self._cached_action_mapping
+        if player != self.game.current_player():
+            raise ValueError("action mapping requires the acting player")
+        mapping = tuple(int(action) for action in self.action_mapper(self.game, player))
+        if not mapping or len(mapping) > self.action_space.n:
+            raise ValueError("action mapping must contain one to action_count entries")
+        if len(set(mapping)) != len(mapping):
+            raise ValueError("action mapping must not contain duplicate game actions")
+        legal_mask = np.asarray(self.game.legal_action_mask(), dtype=np.bool_)
+        if legal_mask.shape != (self.action_space.n,):
+            raise ValueError("legal action mask does not match the action space")
+        if any(
+            action < 0
+            or action >= self.action_space.n
+            or not bool(legal_mask[action])
+            for action in mapping
+        ):
+            raise ValueError("action mapping must contain only legal game actions")
+        self._cached_action_mapping = mapping
+        self._cached_action_mapping_player = player
+        return mapping
+
+    @staticmethod
+    def _mapped_action(mapping: tuple[int, ...], policy_action: int) -> int:
+        if policy_action < 0 or policy_action >= len(mapping):
+            raise ValueError(f"illegal residual action: {policy_action}")
+        return mapping[policy_action]
+
+    def _clear_action_mapping(self) -> None:
+        self._cached_action_mapping = None
+        self._cached_action_mapping_player = None

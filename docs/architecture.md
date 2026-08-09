@@ -42,14 +42,17 @@ flowchart LR
 | `training_potential(player)`（扩展） | 返回归一化零和势函数，供 PPO 计算稠密奖励 |
 | `training_action_mask(player)`（扩展） | 返回正式合法动作的非空子集，用于约束 PPO 探索 |
 | `search_action_mask(player)`（扩展） | 返回正式合法动作的非空子集，用于缩小 AlphaZero/MCTS 分支 |
+| `ActionPrior`（PPO 扩展） | 返回一个首选规则动作；框架将其映射为 residual action 0，其余允许动作自动排列 |
 
 新增游戏不实现神经网络、MCTS、PPO、Elo、日志或绘图代码。游戏作者只负责规则语义和编码语义。
 
 ### 2.2 算法层
 
-AlphaZero 后端要求游戏可复制、完全可观测、动作离散且轮流行动。策略价值网络同时输出合法动作策略和当前玩家视角的局面价值。MCTS 使用网络先验扩展搜索树，自博弈结果写入 replay；完整专家轨迹可通过统一的 `ExpertTrajectory(seed, actions)` 接口重建观测、合法动作掩码和终局价值，用作训练冷启动。
+AlphaZero 后端要求游戏可复制、完全可观测、动作离散且轮流行动。策略价值网络同时输出合法动作策略和当前玩家视角的局面价值。MCTS 使用网络先验扩展搜索树，自博弈结果写入 replay；完整专家轨迹可通过统一的 `ExpertTrajectory(seed, actions, train_players)` 接口重建观测、合法动作掩码和终局价值。`train_players` 只保留指定教师侧的策略目标，另一侧动作仍用于精确重建局面和终局结果。
 
 PPO 后端把平面和标量编码为 masked observation，actor 输出合法动作分布，critic 估计状态价值。棋盘编码器可配置残差块深度，长时序游戏可同时启用 GRU；这些网络容量参数属于统一算法配置。采样器逐局交替控制双方角色，在环境中与固定、随机或联赛对手交互，并使用 clipped policy objective、GAE 和熵正则更新策略。
+
+PPO 可选用 `PrioritizedActionMapper` 训练残差策略。游戏作者提供的 `ActionPrior(game, player)` 可以来自启发式策略、已有 checkpoint 或受预算约束的搜索；框架把先验动作固定放在 residual action 0，并把其余允许动作紧凑排列。学习方和神经网络快照使用同一映射，官方进程对手继续收发规则动作。`action_mapper_id` 写入 checkpoint 并在恢复时校验，确保动作语义不变。该接口使 PPO 可以学习“接受先验或覆盖先验”，无需为游戏复制 PPO 训练循环。
 
 PPO 对手边界支持无状态观测策略和官方有状态进程。进程对手按局接收初始化、双方动作与终局结果；单个进程绑定单个向量环境，避免并发对局交叉污染协议状态。训练池人类可作为课程对手，测试池人类只用于冻结候选后的评测。
 

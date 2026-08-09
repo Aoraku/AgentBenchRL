@@ -48,6 +48,7 @@ class ExpertTrajectory:
 
     seed: int
     actions: tuple[int, ...]
+    train_players: tuple[int, ...] = (0, 1)
 
     def __post_init__(self) -> None:
         if (
@@ -63,6 +64,15 @@ class ExpertTrajectory:
             for action in self.actions
         ):
             raise ValueError("expert trajectory actions must be integers")
+        if (
+            not self.train_players
+            or len(set(self.train_players)) != len(self.train_players)
+            or any(
+                isinstance(player, bool) or player not in (0, 1)
+                for player in self.train_players
+            )
+        ):
+            raise ValueError("expert trajectory train_players must select player 0 or 1")
 
 
 LeagueEvaluation = Callable[
@@ -664,7 +674,7 @@ def _replay_expert_trajectory(
         if action < 0 or action >= len(legal_mask) or not bool(legal_mask[action]):
             raise ValueError("expert trajectory contains an illegal action")
         decision_index = player_decisions[player]
-        if (
+        if player in trajectory.train_players and (
             max_decisions_per_player is None
             or decision_index < max_decisions_per_player
         ):
