@@ -8,6 +8,7 @@ import json
 import random
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
+from functools import partial
 from importlib.metadata import version
 from pathlib import Path
 from typing import Any
@@ -683,20 +684,31 @@ class PPOTrainer:
             snapshot = self.opponent_snapshots[
                 int(self.rng.integers(0, len(self.opponent_snapshots)))
             ]
-            opponent = self.external_opponent or self._snapshot_policy(
-                snapshot, deterministic=False
+            use_external = self.external_opponent is not None and (
+                self.rng.random() < self.config.external_opponent_probability
+            )
+            opponent = (
+                self.external_opponent
+                if use_external
+                else self._snapshot_policy(snapshot, deterministic=False)
+            )
+            training_opponent_id = (
+                self.opponent_id
+                if use_external
+                else f"ppo-snapshot-{snapshot.generation}"
             )
             transition_sink = self._transition_sink(env_index)
             env_functions.append(
-                lambda opponent=opponent, transition_sink=transition_sink: GymGameEnv(
+                partial(
+                    GymGameEnv,
                     self.game_factory,
                     controlled_player=None,
                     opponent=opponent,
-                    opponent_id=self.opponent_id,
+                    opponent_id=training_opponent_id,
                     shaping_beta=self.config.shaping_beta,
                     gamma=self.config.gamma,
                     score_scale=self.config.score_scale,
-                    opponent_training_actions=self.external_opponent is None,
+                    opponent_training_actions=not use_external,
                     transition_callback=transition_sink,
                 )
             )

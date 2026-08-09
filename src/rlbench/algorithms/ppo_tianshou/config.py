@@ -30,6 +30,7 @@ class PPOConfig:
     score_scale: float = 1.0
     snapshot_interval: int = 1
     max_snapshots: int = 8
+    external_opponent_probability: float = 1.0
     device: str = "cpu"
 
     def __post_init__(self) -> None:
@@ -64,3 +65,5 @@ class PPOConfig:
             raise ValueError("max_grad_norm must be positive")
         if self.shaping_beta < 0.0:
             raise ValueError("shaping_beta cannot be negative")
+        if not 0.0 <= self.external_opponent_probability <= 1.0:
+            raise ValueError("external_opponent_probability must be in [0, 1]")

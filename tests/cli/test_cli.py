@@ -347,6 +347,27 @@ def test_ppo_residual_depth_is_canonical_only_when_selected(tmp_path: Path) -> N
     assert residual_config.config_hash != legacy_config.config_hash
 
 
+def test_ppo_external_mix_is_canonical_only_when_selected(tmp_path: Path) -> None:
+    legacy = _write_yaml(tmp_path / "legacy.yaml", "training:\n  seed: 7\n")
+    mixed = _write_yaml(
+        tmp_path / "mixed.yaml",
+        "algorithm:\n  external_opponent_probability: 0.5\ntraining:\n  seed: 7\n",
+    )
+
+    legacy_config = compose_config(legacy, game="snakego", algorithm="ppo")
+    mixed_config = compose_config(mixed, game="snakego", algorithm="ppo")
+
+    assert (
+        "external_opponent_probability" not in legacy_config.canonical["algorithm"]
+    )
+    assert legacy_config.algorithm_settings().external_opponent_probability == 1.0
+    assert (
+        mixed_config.canonical["algorithm"]["external_opponent_probability"] == 0.5
+    )
+    assert mixed_config.algorithm_settings().external_opponent_probability == 0.5
+    assert mixed_config.config_hash != legacy_config.config_hash
+
+
 def test_alphazero_device_is_validated_and_resolved_for_training(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

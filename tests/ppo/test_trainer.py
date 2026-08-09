@@ -180,6 +180,48 @@ def test_stateful_process_opponent_requires_single_vector_environment() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("probability", "expects_external_calls"),
+    ((0.0, False), (1.0, True)),
+)
+def test_external_opponent_probability_mixes_human_and_snapshot_training(
+    probability: float, expects_external_calls: bool
+) -> None:
+    class CountingOpponent:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def __call__(self, observation, legal_mask) -> int:
+            del observation
+            self.calls += 1
+            return int(np.flatnonzero(legal_mask)[0])
+
+    opponent = CountingOpponent()
+    trainer = PPOTrainer(
+        CounterGame,
+        small_config(
+            vector_envs=1,
+            episodes_per_collect=4,
+            external_opponent_probability=probability,
+        ),
+        seed=17,
+        opponent=opponent,
+        opponent_id="teacher",
+    )
+
+    trainer.train_iteration()
+
+    assert (opponent.calls > 0) is expects_external_calls
+
+
+@pytest.mark.parametrize("probability", (-0.01, 1.01, float("nan")))
+def test_external_opponent_probability_requires_a_unit_interval(
+    probability: float,
+) -> None:
+    with pytest.raises(ValueError, match="external_opponent_probability"):
+        PPOConfig(external_opponent_probability=probability)
+
+
 def test_synchronous_collection_updates_ppo_and_emits_events(tmp_path) -> None:
     """A trainer that only constructs PPO but never collects or updates cannot learn."""
     ledger = EventLedger(tmp_path / "events.jsonl")

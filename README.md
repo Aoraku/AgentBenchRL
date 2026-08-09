@@ -107,6 +107,13 @@ rlbench train snakego \
   --output runs/snakego-ppo-human
 ```
 
+Set `algorithm.external_opponent_probability` between `0` and `1` to mix the
+selected process opponent with retained PPO snapshots during collection. A
+value of `1` uses the process opponent for every training iteration, `0` uses
+snapshot self-play, and intermediate values sample between them. Evaluation
+continues to use the selected process opponent, so curriculum training and its
+human gate share one trainer and checkpoint lineage.
+
 Every game can use the built-in deterministic random curriculum before moving
 to self-play or a population opponent:
 
@@ -136,9 +143,9 @@ The strength configurations declare only controls consumed by the standalone
 CLI: self-play volume and workers, optimizer volume, search/network/replay
 settings, PPO vector collection and snapshot settings, deterministic
 evaluation seeds, move deadlines, and resource sampling. AlphaZero uses pure
-self-play and selects CUDA when available; PPO uses learner and retained policy
-snapshots. Human opponent mixtures and promotion cadence are library-level
-orchestration concerns:
+self-play and selects CUDA when available; PPO uses learner, retained policy
+snapshots, and an optional selected process opponent. Multi-human sampling and
+promotion cadence are library-level orchestration concerns:
 construct a `LeagueState`, attach a trainer evaluation callback, schedule
 frozen matches, and apply `evaluate_promotion` to the resulting facts.
 `PPOTrainer` accepts both stateless observation policies and official
