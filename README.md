@@ -69,7 +69,8 @@ class MyGame:
 Register the class in `rlbench.registry.GAMES`. The framework owns training,
 checkpointing, evaluation, metrics, telemetry, and reporting. A plugin may
 also expose `clone`, `symmetries`, `encode_state_id`, `score`, or
-`score_potential` for backend-specific acceleration and diagnostics.
+`training_potential` for backend-specific acceleration, reward shaping, and
+diagnostics.
 
 ## Train and resume
 
@@ -115,7 +116,8 @@ frozen matches, and apply `evaluate_promotion` to the resulting facts.
 game-process opponents. A stateful process opponent receives `begin_game`,
 every applied action, and the terminal result; it requires `vector_envs: 1`
 so one protocol process cannot be shared by concurrent games. Potential-based
-score shaping remains available for this training-only human curriculum.
+score shaping uses a game-defined `training_potential(player)` when present
+and otherwise derives normalized score margin from `score`.
 `AlphaZeroTrainer.run_generation` can record one-hot actions from
 `train_human` opponents as expert replay. The optional
 `expert_demo_max_decisions` bound retains only an opening prefix from each
