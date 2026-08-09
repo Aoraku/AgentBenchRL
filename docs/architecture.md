@@ -40,6 +40,7 @@ flowchart LR
 | `clone()`（扩展） | 为 MCTS 提供无共享可变状态的高效复制；缺省使用深复制 |
 | `score(player)`（扩展） | 返回规则原始分数，供协议审计和 PPO 默认势函数使用 |
 | `training_potential(player)`（扩展） | 返回归一化零和势函数，供 PPO 计算稠密奖励 |
+| `training_action_mask(player)`（扩展） | 返回正式合法动作的非空子集，用于约束 PPO 探索 |
 
 新增游戏不实现神经网络、MCTS、PPO、Elo、日志或绘图代码。游戏作者只负责规则语义和编码语义。
 

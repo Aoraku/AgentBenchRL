@@ -301,11 +301,25 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
         ).astype(np.float32, copy=False)
         if flat.shape != (self._observation_size,):
             raise ValueError("game observation does not match its declared specification")
-        mask = (
-            np.zeros(self.action_space.n, dtype=np.bool_)
-            if self._done
-            else np.asarray(self.game.legal_action_mask(), dtype=np.bool_).copy()
-        )
+        mask = np.zeros(self.action_space.n, dtype=np.bool_)
+        if not self._done:
+            legal_mask = np.asarray(self.game.legal_action_mask(), dtype=np.bool_)
+            if legal_mask.shape != (self.action_space.n,):
+                raise ValueError("legal action mask does not match the action space")
+            training_action_mask = getattr(self.game, "training_action_mask", None)
+            mask = (
+                np.asarray(
+                    training_action_mask(self.controlled_player), dtype=np.bool_
+                ).copy()
+                if callable(training_action_mask)
+                else legal_mask.copy()
+            )
+            if mask.shape != (self.action_space.n,):
+                raise ValueError("training action mask does not match the action space")
+            if np.any(mask & ~legal_mask):
+                raise ValueError("game training action mask must be a legal subset")
+            if not np.any(mask):
+                raise ValueError("game training action mask must retain one action")
         if mask.shape != (self.action_space.n,):
             raise ValueError("legal action mask does not match the action space")
         return {"obs": flat, "mask": mask}

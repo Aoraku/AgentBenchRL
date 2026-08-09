@@ -241,6 +241,14 @@ class AdapterPotentialGame(PotentialGame):
         return margin / 4.0
 
 
+class AdapterActionMaskGame(AlternatingGame):
+    def training_action_mask(self, player: int) -> np.ndarray:
+        mask = self.legal_action_mask().copy()
+        if player == 0:
+            mask[2] = False
+        return mask
+
+
 def test_potential_shaping_telescopes_over_controlled_decisions() -> None:
     """Using inconsistent players or states prevents potential differences telescoping."""
     env = GymGameEnv(
@@ -283,6 +291,27 @@ def test_game_adapter_training_potential_overrides_generic_score_scaling() -> No
     assert not terminated
     assert reward == pytest.approx(0.25)
     assert info["shaping_reward"] == pytest.approx(0.25)
+
+
+def test_game_adapter_can_constrain_only_the_controlled_training_actions() -> None:
+    opponent_masks: list[list[bool]] = []
+
+    def opponent(observation: Observation, mask: np.ndarray) -> int:
+        del observation
+        opponent_masks.append(mask.tolist())
+        return 1
+
+    env = GymGameEnv(
+        AdapterActionMaskGame,
+        controlled_player=0,
+        opponent=opponent,
+    )
+    initial, _ = env.reset(seed=0)
+
+    env.step(0)
+
+    assert initial["mask"].tolist() == [True, False, False]
+    assert opponent_masks == [[False, True, True]]
 
 
 def test_masked_actor_critic_masks_logits_before_categorical_sampling() -> None:
