@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Mapping
+from types import SimpleNamespace
 from typing import Any, Protocol
 
 import gymnasium as gym
@@ -36,6 +38,8 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
         shaping_beta: float = 0.0,
         gamma: float = 0.99,
         score_scale: float = 1.0,
+        opponent_id: str = "opponent",
+        opponent_move_seconds: float | None = None,
         transition_callback: TransitionCallback | None = None,
     ) -> None:
         super().__init__()
@@ -47,6 +51,15 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
             raise ValueError("gamma must be in [0, 1]")
         if score_scale <= 0.0:
             raise ValueError("score_scale must be positive")
+        if not opponent_id:
+            raise ValueError("opponent_id must be non-empty")
+        if opponent_move_seconds is not None and (
+            isinstance(opponent_move_seconds, bool)
+            or not isinstance(opponent_move_seconds, (int, float))
+            or not math.isfinite(opponent_move_seconds)
+            or opponent_move_seconds <= 0.0
+        ):
+            raise ValueError("opponent_move_seconds must be finite and positive")
         self.game_factory = game_factory
         self.game = game_factory()
         self._configured_player = controlled_player
@@ -55,11 +68,14 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
         self.shaping_beta = shaping_beta
         self.gamma = gamma
         self.score_scale = score_scale
+        self.opponent_id = opponent_id
+        self.opponent_move_seconds = opponent_move_seconds
         self.transition_callback = transition_callback
         self._done = False
         self._game_steps = 0
         self._episode_index = -1
         self._episode_step = 0
+        self._opponent_started = False
 
         observation_spec = self.game.spec.observation_spec
         self._observation_size = (
@@ -93,6 +109,7 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
             if seed is not None
             else int(self.np_random.integers(0, 2**31 - 1))
         )
+        self._close_game_aware_opponent()
         self.game = self.game_factory()
         self.game.reset(game_seed)
         self.controlled_player = (
@@ -107,6 +124,19 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
         reset_opponent = getattr(self.opponent, "reset", None)
         if callable(reset_opponent):
             reset_opponent()
+        begin_game = getattr(self.opponent, "begin_game", None)
+        if callable(begin_game):
+            self._opponent_started = True
+            try:
+                begin_game(
+                    None,
+                    self.opponent_id,
+                    1 - int(self.controlled_player),
+                    self.game,
+                )
+            except BaseException:
+                self._close_game_aware_opponent()
+                raise
         opponent_records = self._advance_opponent()
         if self._done:
             raise RuntimeError("game terminated before the controlled player's first turn")
@@ -174,11 +204,20 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
             legal = np.flatnonzero(mask)
             if legal.size == 0:
                 raise ValueError("opponent turn has no legal actions")
-            action = (
-                int(self.opponent(observation, mask.copy()))
-                if self.opponent
-                else int(legal[0])
-            )
+            act_game_process = getattr(self.opponent, "act_game_process", None)
+            if callable(act_game_process):
+                action = int(
+                    act_game_process(
+                        self.game,
+                        timeout_seconds=self.opponent_move_seconds,
+                    )
+                )
+            else:
+                action = (
+                    int(self.opponent(observation, mask.copy()))
+                    if self.opponent
+                    else int(legal[0])
+                )
             if action < 0 or action >= self.action_space.n or not bool(mask[action]):
                 raise ValueError(f"opponent selected illegal action: {action}")
             records.append(self._apply(action))
@@ -186,10 +225,55 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
 
     def _apply(self, action: int) -> StepRecord:
         record = self.game.step(action)
+        observe_action = getattr(self.opponent, "observe_action", None)
+        if self._opponent_started and callable(observe_action):
+            observe_action(self.game, record.player, record.action)
         self._game_steps += 1
         if record.terminated or self._game_steps >= self.game.spec.max_episode_steps:
             self._done = True
+            self._finish_game_aware_opponent(terminated=record.terminated)
         return record
+
+    def _finish_game_aware_opponent(self, *, terminated: bool) -> None:
+        if not self._opponent_started:
+            return
+        end_game = getattr(self.opponent, "end_game", None)
+        try:
+            if callable(end_game):
+                outcome = self.game.outcome(0) if terminated else None
+                score_player_0 = (
+                    1.0
+                    if outcome is not None and outcome > 0.0
+                    else 0.0
+                    if outcome is not None and outcome < 0.0
+                    else 0.5
+                    if outcome == 0.0
+                    else None
+                )
+                end_game(
+                    self.game,
+                    SimpleNamespace(
+                        valid=terminated,
+                        reason="completed" if terminated else "max_episode_steps",
+                        score_player_0=score_player_0,
+                    ),
+                )
+        finally:
+            self._opponent_started = False
+
+    def _close_game_aware_opponent(self) -> None:
+        if not self._opponent_started:
+            return
+        close = getattr(self.opponent, "close", None)
+        try:
+            if callable(close):
+                close()
+        finally:
+            self._opponent_started = False
+
+    def close(self) -> None:
+        self._close_game_aware_opponent()
+        super().close()
 
     def _require_controlled_turn(self) -> int:
         if self.controlled_player is None:

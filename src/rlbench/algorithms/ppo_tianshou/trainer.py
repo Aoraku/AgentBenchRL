@@ -250,6 +250,14 @@ class PPOTrainer:
         self.evaluation_callback = evaluation_callback
         self.event_callback = event_callback
         self.external_opponent = opponent
+        if (
+            opponent is not None
+            and callable(getattr(opponent, "act_game_process", None))
+            and config.vector_envs != 1
+        ):
+            raise ValueError(
+                "a stateful game-process opponent requires vector_envs=1"
+            )
         self.opponent_snapshots: list[OpponentSnapshot] = []
         self.last_vector_env_class: type[DummyVectorEnv] | None = None
         self._telemetry_env_step_id = 0

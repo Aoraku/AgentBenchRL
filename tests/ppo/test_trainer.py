@@ -165,6 +165,21 @@ def test_constructs_the_pinned_tianshou_two_ppo_algorithm() -> None:
     assert trainer.algorithm.critic is trainer.network.critic
 
 
+def test_stateful_process_opponent_requires_single_vector_environment() -> None:
+    """One process cannot safely carry independent state for concurrent games."""
+
+    class ProcessOpponent:
+        def act_game_process(self, game, *, timeout_seconds=None) -> int:
+            return 0
+
+    with pytest.raises(ValueError, match="vector_envs=1"):
+        PPOTrainer(
+            CounterGame,
+            small_config(vector_envs=2),
+            opponent=ProcessOpponent(),  # type: ignore[arg-type]
+        )
+
+
 def test_synchronous_collection_updates_ppo_and_emits_events(tmp_path) -> None:
     """A trainer that only constructs PPO but never collects or updates cannot learn."""
     ledger = EventLedger(tmp_path / "events.jsonl")

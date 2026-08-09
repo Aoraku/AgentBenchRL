@@ -113,6 +113,59 @@ def test_opponent_advances_with_its_own_observation_and_legal_mask() -> None:
     assert env.game.moves == [(0, 0), (1, 1)]
 
 
+class GameProcessOpponent:
+    def __init__(self) -> None:
+        self.events: list[tuple[object, ...]] = []
+
+    def begin_game(self, case, opponent_id: str, side: int, game) -> None:
+        self.events.append(("begin", case, opponent_id, side, game.current_player()))
+
+    def act_game_process(self, game, *, timeout_seconds: float | None = None) -> int:
+        self.events.append(("act", game.current_player(), timeout_seconds))
+        return int(np.flatnonzero(game.legal_action_mask())[0])
+
+    def observe_action(self, game, actor: int, action: int) -> None:
+        self.events.append(("observe", actor, action, len(game.moves)))
+
+    def end_game(self, game, result) -> None:
+        self.events.append(
+            (
+                "end",
+                result.valid,
+                result.reason,
+                result.score_player_0,
+                game.outcome(0),
+            )
+        )
+
+    def close(self) -> None:
+        self.events.append(("close",))
+
+
+def test_game_process_opponent_receives_complete_episode_lifecycle() -> None:
+    """Official process opponents require state initialization and every action."""
+    opponent = GameProcessOpponent()
+    env = GymGameEnv(
+        factory(terminal_after=2),
+        controlled_player=0,
+        opponent=opponent,  # type: ignore[arg-type]
+        opponent_id="train-human",
+        opponent_move_seconds=0.25,
+    )
+
+    env.reset(seed=13)
+    _, reward, terminated, truncated, _ = env.step(0)
+
+    assert terminated and not truncated and reward == 1.0
+    assert opponent.events == [
+        ("begin", None, "train-human", 1, 0),
+        ("observe", 0, 0, 1),
+        ("act", 1, 0.25),
+        ("observe", 1, 1, 2),
+        ("end", True, "completed", 1.0, 1.0),
+    ]
+
+
 @pytest.mark.parametrize(
     ("controlled_player", "expected_reward"),
     [(0, 1.0), (1, -1.0)],

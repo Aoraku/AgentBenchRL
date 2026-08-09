@@ -111,6 +111,11 @@ snapshots. Raw human opponent
 mixtures and promotion cadence are library-level orchestration concerns:
 construct a `LeagueState`, attach a trainer evaluation callback, schedule
 frozen matches, and apply `evaluate_promotion` to the resulting facts.
+`PPOTrainer` accepts both stateless observation policies and official
+game-process opponents. A stateful process opponent receives `begin_game`,
+every applied action, and the terminal result; it requires `vector_envs: 1`
+so one protocol process cannot be shared by concurrent games. Potential-based
+score shaping remains available for this training-only human curriculum.
 `AlphaZeroTrainer.run_generation` can record one-hot actions from
 `train_human` opponents as expert replay. The optional
 `expert_demo_max_decisions` bound retains only an opening prefix from each
