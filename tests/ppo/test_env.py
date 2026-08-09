@@ -235,6 +235,12 @@ class PotentialGame(AlternatingGame):
         return float(np.sign(margin))
 
 
+class AdapterPotentialGame(PotentialGame):
+    def training_potential(self, player: int) -> float:
+        margin = self.points[player] - self.points[1 - player]
+        return margin / 4.0
+
+
 def test_potential_shaping_telescopes_over_controlled_decisions() -> None:
     """Using inconsistent players or states prevents potential differences telescoping."""
     env = GymGameEnv(
@@ -259,6 +265,24 @@ def test_potential_shaping_telescopes_over_controlled_decisions() -> None:
     assert first_info["shaping_reward"] + second_info["shaping_reward"] == pytest.approx(
         0.5 * (env.potential(0) - 0.0)
     )
+
+
+def test_game_adapter_training_potential_overrides_generic_score_scaling() -> None:
+    env = GymGameEnv(
+        AdapterPotentialGame,
+        controlled_player=0,
+        opponent=lambda obs, mask: 1,
+        shaping_beta=1.0,
+        gamma=1.0,
+        score_scale=1000.0,
+    )
+    env.reset(seed=0)
+
+    _, reward, terminated, _, info = env.step(2)
+
+    assert not terminated
+    assert reward == pytest.approx(0.25)
+    assert info["shaping_reward"] == pytest.approx(0.25)
 
 
 def test_masked_actor_critic_masks_logits_before_categorical_sampling() -> None:

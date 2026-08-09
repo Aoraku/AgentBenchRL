@@ -225,6 +225,24 @@ def test_score_potential_is_clipped_normalized_and_antisymmetric() -> None:
     assert potential0 == pytest.approx((game.score(0) - game.score(1)) / 513.0)
 
 
+def test_training_potential_credits_banked_growth_before_it_is_realized() -> None:
+    game, _ = _symmetric_games()
+    game.state.snakes[0].length_bank += 3
+
+    potential0 = game.training_potential(0)
+    potential1 = game.training_potential(1)
+
+    banked = [
+        sum(snake.length_bank for snake in game.state.snakes if snake.camp == side)
+        for side in (0, 1)
+    ]
+    expected_margin = (
+        game.score(0) + 2.0 * banked[0] - game.score(1) - 2.0 * banked[1]
+    )
+    assert potential0 == pytest.approx(expected_margin / 513.0)
+    assert potential0 == pytest.approx(-potential1)
+
+
 def test_scalar_inventory_distinguishes_split_items_from_railguns() -> None:
     """Collapsing item types prevents a policy from observing official inventory state."""
     item = ItemState(

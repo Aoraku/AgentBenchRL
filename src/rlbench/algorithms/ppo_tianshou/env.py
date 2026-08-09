@@ -190,6 +190,12 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
         return self._encoded_observation(), reward, terminated, truncated, info
 
     def potential(self, player: int) -> float:
+        training_potential = getattr(self.game, "training_potential", None)
+        if callable(training_potential):
+            value = float(training_potential(player))
+            if not math.isfinite(value):
+                raise ValueError("game training potential must be finite")
+            return float(np.clip(value, -1.0, 1.0))
         score = getattr(self.game, "score", None)
         if not callable(score):
             return 0.0

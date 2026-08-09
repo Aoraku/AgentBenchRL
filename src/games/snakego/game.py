@@ -90,6 +90,20 @@ class SnakeGoGame:
         margin = self.score(player) - self.score(1 - player)
         return float(np.clip(margin / 513.0, -1.0, 1.0))
 
+    def training_potential(self, player: int) -> float:
+        """Expose score material plus banked growth as PPO shaping potential."""
+        if player not in (0, 1):
+            raise ValueError("player must be 0 or 1")
+
+        def effective_score(side: int) -> float:
+            banked_growth = sum(
+                snake.length_bank for snake in self.state.snakes if snake.camp == side
+            )
+            return self.score(side) + 2.0 * banked_growth
+
+        margin = effective_score(player) - effective_score(1 - player)
+        return float(np.clip(margin / 513.0, -1.0, 1.0))
+
     @property
     def official_winner(self) -> int | None:
         return self.engine.official_winner
