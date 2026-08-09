@@ -22,14 +22,18 @@ from games.snakego import (
     SnakeState,
     canonical_action,
     export_alphazero_inference_bundle,
+    export_ppo_inference_bundle,
     load_alphazero_inference_bundle,
     load_alphazero_policy,
+    load_ppo_inference_bundle,
+    load_ppo_policy,
 )
 from rlbench.algorithms.alphazero import (
     AlphaZeroConfig,
     AlphaZeroTrainer,
     PolicyValueNet,
 )
+from rlbench.algorithms.ppo_tianshou import PPOConfig, PPOTrainer
 from rlbench.game import validate_game
 
 
@@ -717,6 +721,34 @@ def _save_real_alphazero_checkpoint(path: Path) -> tuple[AlphaZeroConfig, dict]:
     }
 
 
+def _save_real_ppo_checkpoint(path: Path) -> tuple[PPOConfig, dict]:
+    torch.manual_seed(79)
+    config = PPOConfig(
+        learning_rate=1e-4,
+        hidden_size=8,
+        conv_channels=4,
+        recurrent=True,
+        gru_hidden_size=8,
+        vector_envs=1,
+        episodes_per_collect=1,
+        minibatch_size=1,
+        update_repetitions=1,
+        snapshot_interval=1,
+        max_snapshots=1,
+        device="cpu",
+    )
+    trainer = PPOTrainer(
+        lambda: SnakeGoGame({"max_round": 2}),
+        config,
+        seed=23,
+    )
+    trainer.save_checkpoint(path)
+    return config, {
+        name: tensor.detach().clone()
+        for name, tensor in trainer.network.state_dict().items()
+    }
+
+
 def test_public_loader_restores_a_real_alphazero_checkpoint_deterministically(
     tmp_path: Path,
 ) -> None:
@@ -777,6 +809,47 @@ def test_compact_inference_bundle_embeds_network_config_and_game_schema(
         torch.equal(restored_state[name], expected_state[name])
         for name in expected_state
     )
+
+
+def test_ppo_checkpoint_and_compact_bundle_preserve_recurrent_policy(
+    tmp_path: Path,
+) -> None:
+    checkpoint = tmp_path / "snakego-ppo-training.pt"
+    bundle = tmp_path / "snakego-ppo-inference.pt"
+    config, expected_state = _save_real_ppo_checkpoint(checkpoint)
+
+    checkpoint_policy = load_ppo_policy(checkpoint, seed=31)
+    exported = export_ppo_inference_bundle(checkpoint, bundle)
+    bundle_policy = load_ppo_inference_bundle(exported, seed=31)
+
+    payload = torch.load(exported, map_location="cpu", weights_only=False)
+    assert payload["format"] == "agentbench-rl-frame-ppo-inference"
+    assert payload["config"]["recurrent"] is True
+    assert payload["config"]["gru_hidden_size"] == config.gru_hidden_size
+    assert tuple(payload["game_spec"]["plane_names"]) == PLANE_NAMES
+    assert all(
+        torch.equal(bundle_policy.network.state_dict()[name], expected_state[name])
+        for name in expected_state
+    )
+
+    game = SnakeGoGame(max_round=2)
+    game.reset(17)
+    observation = game.observe(game.current_player())
+    mask = game.training_action_mask(game.current_player())
+    direct = checkpoint_policy.select_action_step(
+        observation,
+        mask,
+        deterministic=True,
+    )
+    compact = bundle_policy.select_action_step(
+        observation,
+        mask,
+        deterministic=True,
+    )
+    assert direct.action == compact.action
+    assert direct.state is not None
+    assert compact.state is not None
+    assert np.array_equal(direct.state.hidden, compact.state.hidden)
 
 
 def test_inference_bundle_rejects_an_observation_schema_mismatch(
@@ -867,6 +940,43 @@ def test_module_agent_loads_compact_bundle_without_network_arguments(
             str(bundle),
             "--simulations",
             "2",
+        ],
+        input=raw_input,
+        capture_output=True,
+        check=False,
+        timeout=30,
+        env=environment,
+    )
+
+    assert completed.returncode == 0, completed.stderr.decode(errors="replace")
+    assert len(completed.stdout) == 5
+    assert completed.stdout[:4] == b"\x00\x00\x00\x01"
+    assert 1 <= completed.stdout[4] <= 6
+
+
+def test_module_agent_auto_detects_a_recurrent_ppo_bundle(tmp_path: Path) -> None:
+    checkpoint = tmp_path / "snakego-ppo-process.pt"
+    bundle = tmp_path / "snakego-ppo-process-inference.pt"
+    _save_real_ppo_checkpoint(checkpoint)
+    export_ppo_inference_bundle(checkpoint, bundle)
+    raw_input = (
+        _official_config(player=0)
+        + _official_items([(8, 8, 0, 4, 2)])
+        + b"\x11\x00\x00\x00\x02\x00\x02"
+    )
+    environment = os.environ.copy()
+    source_root = str(Path(__file__).parents[2] / "src")
+    environment["PYTHONPATH"] = os.pathsep.join(
+        filter(None, (source_root, environment.get("PYTHONPATH", "")))
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "games.snakego",
+            "--bundle",
+            str(bundle),
         ],
         input=raw_input,
         capture_output=True,

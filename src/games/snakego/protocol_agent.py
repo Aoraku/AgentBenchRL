@@ -20,10 +20,13 @@ from .state import ItemState
 
 if TYPE_CHECKING:
     from rlbench.algorithms.alphazero import AlphaZeroConfig, MCTS
+    from rlbench.algorithms.ppo_tianshou import PPOTrainer
 
 
 INFERENCE_BUNDLE_FORMAT = "agentbench-rl-frame-alphazero-inference"
 INFERENCE_BUNDLE_SCHEMA_VERSION = 1
+PPO_INFERENCE_BUNDLE_FORMAT = "agentbench-rl-frame-ppo-inference"
+PPO_INFERENCE_BUNDLE_SCHEMA_VERSION = 1
 
 
 @dataclass(frozen=True, slots=True)
@@ -189,6 +192,32 @@ def load_alphazero_policy(
     return MCTS(config, network, seed=seed)
 
 
+def load_ppo_policy(
+    checkpoint_path: str | Path,
+    *,
+    device: str = "cpu",
+    seed: int = 0,
+) -> PPOTrainer:
+    """Restore PPO actor-critic weights as a deterministic deployment policy."""
+    from rlbench.algorithms import PolicyCheckpoint
+    from rlbench.algorithms.ppo_tianshou import PPOConfig, PPOTrainer
+
+    checkpoint = PolicyCheckpoint.load(checkpoint_path, map_location="cpu")
+    raw_config = checkpoint.trainer_state.get("ppo_config")
+    if not isinstance(raw_config, Mapping):
+        raise ValueError("PPO checkpoint is missing its configuration")
+    config = replace(PPOConfig(**dict(raw_config)), device=device)
+    trainer = PPOTrainer(
+        lambda: SnakeGoGame({"max_round": 512}),
+        config,
+        seed=seed,
+    )
+    checkpoint.validate_restore(model=trainer.network)
+    checkpoint.restore(model=trainer.network)
+    trainer.network.eval()
+    return trainer
+
+
 def export_alphazero_inference_bundle(
     checkpoint_path: str | Path,
     output_path: str | Path,
@@ -248,6 +277,32 @@ def export_alphazero_inference_bundle(
     return destination
 
 
+def export_ppo_inference_bundle(
+    checkpoint_path: str | Path,
+    output_path: str | Path,
+) -> Path:
+    """Strip PPO optimizer, snapshots, counters, and RNG state for deployment."""
+    import torch
+
+    trainer = load_ppo_policy(checkpoint_path, device="cpu")
+    payload = {
+        "format": PPO_INFERENCE_BUNDLE_FORMAT,
+        "schema_version": PPO_INFERENCE_BUNDLE_SCHEMA_VERSION,
+        "game_spec": {
+            "name": SNAKEGO_SPEC.name,
+            "action_names": SNAKEGO_SPEC.action_names,
+            "plane_names": SNAKEGO_SPEC.observation_spec.plane_names,
+            "scalar_names": SNAKEGO_SPEC.observation_spec.scalar_names,
+        },
+        "config": asdict(trainer.config),
+        "model_state": {
+            name: tensor.detach().cpu()
+            for name, tensor in trainer.network.state_dict().items()
+        },
+    }
+    return _write_inference_bundle(payload, output_path, torch_module=torch)
+
+
 def load_alphazero_inference_bundle(
     bundle_path: str | Path,
     *,
@@ -300,6 +355,85 @@ def load_alphazero_inference_bundle(
         raise ValueError("inference bundle model state does not match its schema") from exc
     network.eval()
     return MCTS(config, network, seed=seed)
+
+
+def load_ppo_inference_bundle(
+    bundle_path: str | Path,
+    *,
+    device: str = "cpu",
+    seed: int = 0,
+) -> PPOTrainer:
+    """Restore a compact PPO bundle, including recurrent deployment state."""
+    import torch
+
+    from rlbench.algorithms.ppo_tianshou import PPOConfig, PPOTrainer
+
+    payload = _read_inference_bundle(bundle_path, torch_module=torch)
+    if payload.get("format") != PPO_INFERENCE_BUNDLE_FORMAT:
+        raise ValueError("unsupported PPO inference bundle format")
+    if payload.get("schema_version") != PPO_INFERENCE_BUNDLE_SCHEMA_VERSION:
+        raise ValueError("unsupported PPO inference bundle schema version")
+    _validate_inference_game_spec(payload.get("game_spec"))
+    raw_config = payload.get("config")
+    model_state = payload.get("model_state")
+    if not isinstance(raw_config, Mapping) or not isinstance(model_state, Mapping):
+        raise ValueError("PPO inference bundle is missing config or model state")
+    config = replace(PPOConfig(**dict(raw_config)), device=device)
+    trainer = PPOTrainer(
+        lambda: SnakeGoGame({"max_round": 512}),
+        config,
+        seed=seed,
+    )
+    try:
+        trainer.network.load_state_dict(dict(model_state), strict=True)
+    except Exception as exc:
+        raise ValueError("PPO inference model state does not match its schema") from exc
+    trainer.network.eval()
+    return trainer
+
+
+def _read_inference_bundle(
+    bundle_path: str | Path, *, torch_module: Any
+) -> Mapping[str, Any]:
+    try:
+        payload = torch_module.load(
+            bundle_path,
+            map_location="cpu",
+            weights_only=False,
+        )
+    except Exception as exc:
+        raise ValueError(f"invalid inference bundle: {bundle_path}") from exc
+    if not isinstance(payload, Mapping):
+        raise ValueError("inference bundle must contain a mapping")
+    return payload
+
+
+def _write_inference_bundle(
+    payload: Mapping[str, Any],
+    output_path: str | Path,
+    *,
+    torch_module: Any,
+) -> Path:
+    destination = Path(output_path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        dir=destination.parent,
+        prefix=f".{destination.name}.",
+        suffix=".tmp",
+    )
+    os.close(descriptor)
+    try:
+        torch_module.save(dict(payload), temporary_name)
+        with open(temporary_name, "rb") as stream:
+            os.fsync(stream.fileno())
+        os.replace(temporary_name, destination)
+    except BaseException:
+        try:
+            os.unlink(temporary_name)
+        except FileNotFoundError:
+            pass
+        raise
+    return destination
 
 
 def _validate_inference_game_spec(raw: object) -> None:
@@ -373,7 +507,7 @@ def _write_decision(stream: BinaryIO, decision: bytes | None) -> None:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Load an AlphaZero checkpoint and serve the official binary protocol."""
+    """Load an AlphaZero or PPO policy and serve the official binary protocol."""
     parser = argparse.ArgumentParser(description=__doc__)
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--checkpoint", type=Path)
@@ -383,46 +517,72 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--channels", type=int)
     parser.add_argument("--residual-blocks", type=int)
     parser.add_argument("--inference-batch-size", type=int)
+    parser.add_argument("--algorithm", choices=("alphazero", "ppo"))
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--seed", type=int, default=0)
     arguments = parser.parse_args(argv)
 
-    from rlbench.algorithms.alphazero import AlphaZeroConfig
-
     if arguments.bundle is not None:
-        policy = load_alphazero_inference_bundle(
-            arguments.bundle,
-            device=arguments.device,
-            seed=arguments.seed,
-            simulations=arguments.simulations,
-            c_puct=arguments.c_puct,
-            inference_batch_size=arguments.inference_batch_size,
-        )
+        import torch
+
+        payload = _read_inference_bundle(arguments.bundle, torch_module=torch)
+        bundle_format = payload.get("format")
+        if bundle_format == PPO_INFERENCE_BUNDLE_FORMAT:
+            if arguments.algorithm not in (None, "ppo"):
+                parser.error("bundle contains PPO but --algorithm requests AlphaZero")
+            policy = load_ppo_inference_bundle(
+                arguments.bundle,
+                device=arguments.device,
+                seed=arguments.seed,
+            )
+        elif bundle_format == INFERENCE_BUNDLE_FORMAT:
+            if arguments.algorithm not in (None, "alphazero"):
+                parser.error("bundle contains AlphaZero but --algorithm requests PPO")
+            policy = load_alphazero_inference_bundle(
+                arguments.bundle,
+                device=arguments.device,
+                seed=arguments.seed,
+                simulations=arguments.simulations,
+                c_puct=arguments.c_puct,
+                inference_batch_size=arguments.inference_batch_size,
+            )
+        else:
+            parser.error("bundle has an unsupported policy format")
     else:
-        if arguments.channels is None or arguments.residual_blocks is None:
-            parser.error("--checkpoint requires --channels and --residual-blocks")
-        config = AlphaZeroConfig(
-            simulations=(
-                64 if arguments.simulations is None else arguments.simulations
-            ),
-            c_puct=1.5 if arguments.c_puct is None else arguments.c_puct,
-            root_dirichlet_fraction=0.0,
-            self_play_temperature=0.0,
-            temperature_moves=0,
-            channels=arguments.channels,
-            residual_blocks=arguments.residual_blocks,
-            mixed_precision=False,
-            inference_batch_size=(
-                32
-                if arguments.inference_batch_size is None
-                else arguments.inference_batch_size
-            ),
-        )
-        policy = load_alphazero_policy(
-            arguments.checkpoint,
-            config=config,
-            device=arguments.device,
-            seed=arguments.seed,
-        )
+        algorithm = arguments.algorithm or "alphazero"
+        if algorithm == "ppo":
+            policy = load_ppo_policy(
+                arguments.checkpoint,
+                device=arguments.device,
+                seed=arguments.seed,
+            )
+        else:
+            from rlbench.algorithms.alphazero import AlphaZeroConfig
+
+            if arguments.channels is None or arguments.residual_blocks is None:
+                parser.error("--checkpoint requires --channels and --residual-blocks")
+            config = AlphaZeroConfig(
+                simulations=(
+                    64 if arguments.simulations is None else arguments.simulations
+                ),
+                c_puct=1.5 if arguments.c_puct is None else arguments.c_puct,
+                root_dirichlet_fraction=0.0,
+                self_play_temperature=0.0,
+                temperature_moves=0,
+                channels=arguments.channels,
+                residual_blocks=arguments.residual_blocks,
+                mixed_precision=False,
+                inference_batch_size=(
+                    32
+                    if arguments.inference_batch_size is None
+                    else arguments.inference_batch_size
+                ),
+            )
+            policy = load_alphazero_policy(
+                arguments.checkpoint,
+                config=config,
+                device=arguments.device,
+                seed=arguments.seed,
+            )
     run_official_agent(policy)
     return 0

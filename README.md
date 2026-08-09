@@ -249,6 +249,22 @@ python -m games.snakego \
   --seed 0
 ```
 
+PPO uses the same official wrapper. Its bundle embeds the actor, critic,
+masked-action configuration, and optional GRU dimensions; recurrent state is
+carried between the local player's decisions:
+
+```bash
+snakego-export-policy \
+  --algorithm ppo \
+  --checkpoint runs/snakego-ppo/checkpoints/checkpoint_000200.pt \
+  --output submissions/snakego/ppo-policy.pt
+
+python -m games.snakego \
+  --bundle submissions/snakego/ppo-policy.pt \
+  --device cpu \
+  --seed 0
+```
+
 A complete AlphaZero training checkpoint can also serve the competition
 stdin/stdout binary protocol directly. Network dimensions must match the
 training configuration.
