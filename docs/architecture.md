@@ -41,6 +41,7 @@ flowchart LR
 | `score(player)`（扩展） | 返回规则原始分数，供协议审计和 PPO 默认势函数使用 |
 | `training_potential(player)`（扩展） | 返回归一化零和势函数，供 PPO 计算稠密奖励 |
 | `training_action_mask(player)`（扩展） | 返回正式合法动作的非空子集，用于约束 PPO 探索 |
+| `search_action_mask(player)`（扩展） | 返回正式合法动作的非空子集，用于缩小 AlphaZero/MCTS 分支 |
 
 新增游戏不实现神经网络、MCTS、PPO、Elo、日志或绘图代码。游戏作者只负责规则语义和编码语义。
 
@@ -125,7 +126,7 @@ PPO 奖励适配保持为一个可选函数：游戏可实现
 `terminal_outcome + beta * (gamma * potential_next - potential_current)`。
 未实现该函数时，框架使用双方分差和 `score_scale`。SnakeGo 的势函数由正式分数与尚未转化为身体长度的成长库存组成，因此拾取成长道具时即可获得与最终计分一致的稠密反馈。
 
-SnakeGo 的 `training_action_mask(player)` 屏蔽撞边界、撞墙和撞其他蛇导致的无收益死亡，同时保留咬到自身形成闭环并固化得分的动作。存活动作使用洪泛搜索估计头部可达空间；存在宽路径时，进入少于 12 格或少于蛇身长度空间的动作会被屏蔽。PPO 训练、统一评测和官方协议导出使用同一动作子集；该约束只收窄正式合法动作集合，不改变规则引擎和终局胜负定义。AlphaZero/MCTS 仍搜索完整合法动作集合。
+SnakeGo 的 `training_action_mask(player)` 屏蔽撞边界、撞墙和撞其他蛇导致的无收益死亡，同时保留咬到自身形成闭环并固化得分的动作。存活动作使用洪泛搜索估计头部可达空间；存在宽路径时，进入少于 12 格或少于蛇身长度空间的动作会被屏蔽。PPO 训练、统一评测和官方协议导出使用同一动作子集；AlphaZero/MCTS 通过 `search_action_mask(player)` 使用该子集缩小搜索分支。该约束只收窄策略选择，不改变规则引擎、正式合法动作定义和终局胜负定义。
 
 观测由 85 个 `16×16` 平面和 154 个标量组成，采用行动玩家相对坐标：
 

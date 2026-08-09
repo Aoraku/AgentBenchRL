@@ -159,6 +159,10 @@ class SnakeGoGame:
                     safe[action] = True
         return safe if np.any(safe) else legal
 
+    def search_action_mask(self, player: int) -> NDArray[np.bool_]:
+        """Use the deployment action subset to reduce AlphaZero branching."""
+        return self.training_action_mask(player)
+
     @property
     def official_winner(self) -> int | None:
         return self.engine.official_winner

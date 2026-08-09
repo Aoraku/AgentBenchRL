@@ -106,7 +106,7 @@ class MCTS:
             raise ValueError("cannot search a terminal game")
         root = _Node(to_play=game.current_player())
         root_simulation = clone_game(game)
-        root_mask = root_simulation.legal_action_mask()
+        root_mask = _search_action_mask(root_simulation)
         root_observation = root_simulation.observe(root.to_play)
         root_logits, root_values = self.evaluator.evaluate_batch(
             [root_observation], [root_mask]
@@ -228,7 +228,7 @@ class MCTS:
                     legal_mask=None,
                     terminal_value=float(outcome),
                 )
-        legal_mask = simulation.legal_action_mask()
+        legal_mask = _search_action_mask(simulation)
         if node.to_play is None:
             raise RuntimeError("leaf actor was not resolved")
         observation = simulation.observe(node.to_play)
@@ -324,6 +324,17 @@ class MCTS:
             raise ValueError("training action probabilities must be finite and non-negative")
         probabilities /= probability_sum
         return int(self.rng.choice(len(probabilities), p=probabilities))
+
+
+def _search_action_mask(game: DiscreteGame) -> NDArray[np.bool_]:
+    legal = np.asarray(game.legal_action_mask(), dtype=np.bool_)
+    search_action_mask = getattr(game, "search_action_mask", None)
+    if not callable(search_action_mask):
+        return legal
+    mask = np.asarray(search_action_mask(game.current_player()), dtype=np.bool_)
+    if mask.shape != legal.shape or np.any(mask & ~legal) or not np.any(mask):
+        raise ValueError("search action mask must be a non-empty legal subset")
+    return mask
 
 
 def _masked_softmax(

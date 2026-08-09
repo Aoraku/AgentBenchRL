@@ -107,6 +107,31 @@ def test_mcts_expands_only_actions_permitted_by_the_legal_mask() -> None:
     assert np.all(result.visit_policy[[0, 1, 3]] == 0.0)
 
 
+def test_mcts_honors_an_optional_search_action_subset_at_every_node() -> None:
+    class ConstrainedTicTacToe(TicTacToe):
+        def search_action_mask(self, player: int) -> np.ndarray:
+            assert player == self.current_player()
+            mask = np.zeros(9, dtype=np.bool_)
+            mask[int(np.flatnonzero(self.legal_action_mask())[-1])] = True
+            return mask
+
+        def clone(self) -> ConstrainedTicTacToe:
+            copied = ConstrainedTicTacToe()
+            copied.board = self.board.copy()
+            copied.player = self.player
+            copied.terminal = self.terminal
+            copied.winner = self.winner
+            copied.moves = self.moves
+            return copied
+
+    result = MCTS(
+        _config(simulations=6), ConstantBatchEvaluator()
+    ).search(ConstrainedTicTacToe())
+
+    assert result.expanded_actions == (8,)
+    assert result.action == 8
+
+
 def test_mcts_discovers_an_immediate_win() -> None:
     """Removing terminal leaf handling would miss the forced winning move."""
     game = TicTacToe()
