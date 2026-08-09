@@ -92,6 +92,25 @@ rlbench train snakego \
   --output runs/snakego-ppo
 ```
 
+PPO can train directly against one content-addressed process opponent from the
+training population. The learner alternates player 0 and player 1 between
+episodes. `--initialize` copies model weights from an imitation or earlier PPO
+checkpoint while starting a fresh PPO optimizer and fresh counters:
+
+```bash
+rlbench train snakego \
+  --algo ppo \
+  --config configs/experiments/snakego_ppo_human_curriculum.yaml \
+  --population populations/snakego-train.yaml \
+  --opponent-id rank15-sampleAI \
+  --initialize checkpoints/snakego-bc.pt \
+  --output runs/snakego-ppo-human
+```
+
+The selected population, opponent executable, and initialization checkpoint
+are identified by hashes in `events.jsonl`; no machine address is part of the
+experiment interface. A `test_human` entry is rejected by the training command.
+
 Resume uses the original run directory, its immutable run manifest, and its
 latest recorded checkpoint:
 
@@ -108,8 +127,8 @@ CLI: self-play volume and workers, optimizer volume, search/network/replay
 settings, PPO vector collection and snapshot settings, deterministic
 evaluation seeds, move deadlines, and resource sampling. AlphaZero uses pure
 self-play and selects CUDA when available; PPO uses learner and retained policy
-snapshots. Raw human opponent
-mixtures and promotion cadence are library-level orchestration concerns:
+snapshots. Human opponent mixtures and promotion cadence are library-level
+orchestration concerns:
 construct a `LeagueState`, attach a trainer evaluation callback, schedule
 frozen matches, and apply `evaluate_promotion` to the resulting facts.
 `PPOTrainer` accepts both stateless observation policies and official

@@ -107,6 +107,77 @@ def test_registry_is_explicit_and_validate_game_runs_contract(
     }
 
 
+def test_training_input_controls_are_ppo_only_and_pair_population_identity() -> None:
+    with pytest.raises(ValueError, match="provided together"):
+        cli_module._resolve_training_inputs(
+            "snakego",
+            algorithm="ppo",
+            population="population.yaml",
+            opponent_id=None,
+            initialize=None,
+            resume=None,
+        )
+    with pytest.raises(ValueError, match="require PPO"):
+        cli_module._resolve_training_inputs(
+            "snakego",
+            algorithm="alphazero",
+            population=None,
+            opponent_id=None,
+            initialize="checkpoint.pt",
+            resume=None,
+        )
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        cli_module._resolve_training_inputs(
+            "snakego",
+            algorithm="ppo",
+            population=None,
+            opponent_id=None,
+            initialize="checkpoint.pt",
+            resume="checkpoint.pt",
+        )
+
+
+def test_resume_rejects_a_different_process_opponent(tmp_path: Path) -> None:
+    ledger = EventLedger(tmp_path / "events.jsonl")
+    ledger.append(
+        Event(
+            "run_started",
+            "run",
+            payload={
+                "training_inputs": {
+                    "initial_checkpoint": {"checkpoint_hash": "sha256:init"},
+                    "opponent": {
+                        "agent_id": "rank15",
+                        "agent_hash": "sha256:human-a",
+                    },
+                }
+            },
+        )
+    )
+
+    cli_module._validate_training_inputs(
+        ledger,
+        {
+            "initial_checkpoint": None,
+            "opponent": {
+                "agent_id": "rank15",
+                "agent_hash": "sha256:human-a",
+            },
+        },
+    )
+    with pytest.raises(ValueError, match="does not match"):
+        cli_module._validate_training_inputs(
+            ledger,
+            {
+                "initial_checkpoint": None,
+                "opponent": {
+                    "agent_id": "rank06",
+                    "agent_hash": "sha256:human-b",
+                },
+            },
+        )
+
+
 def test_config_composition_is_deterministic_strict_and_path_aware(
     tmp_path: Path,
 ) -> None:

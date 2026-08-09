@@ -68,6 +68,9 @@ def _parser() -> argparse.ArgumentParser:
     train.add_argument("--config", required=True)
     train.add_argument("--output")
     train.add_argument("--resume")
+    train.add_argument("--initialize", help="warm-start PPO model weights")
+    train.add_argument("--population", help="training population manifest")
+    train.add_argument("--opponent-id", help="train-pool process opponent")
 
     evaluate = commands.add_parser("evaluate", help="evaluate a local checkpoint")
     evaluate.add_argument("game", choices=sorted(GAMES))
@@ -93,6 +96,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             config_path=args.config,
             output=args.output,
             resume=args.resume,
+            initialize=args.initialize,
+            population=args.population,
+            opponent_id=args.opponent_id,
         )
     if args.command == "evaluate":
         return _evaluate_command(
@@ -133,6 +139,9 @@ def _train_command(
     config_path: str | Path,
     output: str | Path | None,
     resume: str | Path | None,
+    initialize: str | Path | None = None,
+    population: str | Path | None = None,
+    opponent_id: str | None = None,
 ) -> int:
     composed = compose_config(
         config_path,
@@ -142,6 +151,14 @@ def _train_command(
         caller_directory=Path.cwd(),
     )
     run_dir = composed.output_dir
+    training_opponent, training_inputs = _resolve_training_inputs(
+        game_name,
+        algorithm=algorithm,
+        population=population,
+        opponent_id=opponent_id,
+        initialize=initialize,
+        resume=resume,
+    )
     manifest_path = run_dir / "run_manifest.json"
     if manifest_path.exists():
         if resume is None:
@@ -157,6 +174,8 @@ def _train_command(
 
     run_id = str(manifest["run_id"])
     ledger = EventLedger(run_dir / "events.jsonl")
+    if resume is not None:
+        _validate_training_inputs(ledger, training_inputs)
     resume_lineage: Mapping[str, Any] | None = None
     if resume is not None:
         resume_lineage = _validate_checkpoint_lineage(
@@ -177,6 +196,7 @@ def _train_command(
                     "candidate_id": "learner",
                     "config_hash": composed.config_hash,
                     "manifest_hash": manifest["manifest_hash"],
+                    "training_inputs": training_inputs,
                 },
             )
         )
@@ -202,10 +222,22 @@ def _train_command(
     try:
         if sample_resources:
             sampler.sample("learning")
-        trainer, counter_name = _build_trainer(composed, ledger=ledger, run_id=run_id)
+        trainer, counter_name = _build_trainer(
+            composed,
+            ledger=ledger,
+            run_id=run_id,
+            opponent=training_opponent,
+            opponent_id=(
+                str(training_inputs["opponent"]["agent_id"])
+                if training_inputs["opponent"] is not None
+                else "opponent"
+            ),
+        )
         if resume is not None:
             trainer.load_checkpoint(Path(resume).resolve())
             _restore_event_backed_budgets(trainer, ledger=ledger, run_id=run_id)
+        elif initialize is not None:
+            trainer.initialize_model(Path(initialize).resolve())
         _run_training(trainer, composed)
         elapsed = time.monotonic() - started
         trainer.budgets.add_wall_seconds(elapsed, "learning")
@@ -276,6 +308,9 @@ def _train_command(
         )
         raise
     finally:
+        close_opponent = getattr(training_opponent, "close", None)
+        if callable(close_opponent):
+            close_opponent()
         sampler.close()
 
     _print_json(
@@ -291,7 +326,12 @@ def _train_command(
 
 
 def _build_trainer(
-    config: ComposedConfig, *, ledger: EventLedger, run_id: str
+    config: ComposedConfig,
+    *,
+    ledger: EventLedger,
+    run_id: str,
+    opponent: Any = None,
+    opponent_id: str = "opponent",
 ) -> tuple[Any, str]:
     factory = game_factory(config.game, config.canonical["game"])
     seed = int(config.canonical["training"]["seed"])
@@ -321,6 +361,8 @@ def _build_trainer(
                 seed=seed,
                 ledger=ledger,
                 run_id=run_id,
+                opponent=opponent,
+                opponent_id=opponent_id,
             ),
             "iteration",
         )
@@ -835,6 +877,75 @@ def _population_policy(
             raise ValueError("snakego_official agents require the SnakeGo game")
         return SnakeGoProcessPolicy(entry, population_root)
     return ProcessAgent(entry, population_root)
+
+
+def _resolve_training_inputs(
+    game_name: str,
+    *,
+    algorithm: str,
+    population: str | Path | None,
+    opponent_id: str | None,
+    initialize: str | Path | None,
+    resume: str | Path | None,
+) -> tuple[ProcessAgent | None, dict[str, Any]]:
+    if (population is None) != (opponent_id is None):
+        raise ValueError(
+            "training population and opponent-id must be provided together"
+        )
+    if algorithm != "ppo" and any(
+        value is not None for value in (population, opponent_id, initialize)
+    ):
+        raise ValueError("process-opponent and initialization controls require PPO")
+    if initialize is not None and resume is not None:
+        raise ValueError("initialize and resume are mutually exclusive")
+
+    initial_record = None
+    if initialize is not None:
+        initial_path = Path(initialize).resolve()
+        initial_record = {
+            "checkpoint_hash": _sha256_file(initial_path),
+            "checkpoint_name": initial_path.name,
+        }
+
+    opponent = None
+    opponent_record = None
+    if population is not None:
+        manifest = PopulationManifest.from_yaml(population)
+        assert opponent_id is not None
+        entry = manifest.entry(opponent_id)
+        if entry.kind == "test_human":
+            raise ValueError("test_human opponents cannot influence training")
+        opponent = _population_policy(
+            entry, manifest.population_root, game_name=game_name
+        )
+        opponent_record = {
+            "agent_id": entry.agent_id,
+            "agent_hash": entry.content_hash,
+            "agent_kind": entry.kind,
+            "population_hash": manifest.content_hash,
+            "protocol": entry.protocol,
+        }
+    return opponent, {
+        "initial_checkpoint": initial_record,
+        "opponent": opponent_record,
+    }
+
+
+def _validate_training_inputs(
+    ledger: EventLedger, current: Mapping[str, Any]
+) -> None:
+    started = next(
+        (event for event in ledger.read() if event.event_type == "run_started"),
+        None,
+    )
+    if started is None:
+        raise ValueError("resume run has no run_started event")
+    recorded = started.payload.get("training_inputs")
+    recorded_opponent = (
+        recorded.get("opponent") if isinstance(recorded, Mapping) else None
+    )
+    if recorded_opponent != current.get("opponent"):
+        raise ValueError("resume training opponent does not match the original run")
 
 
 def _create_manifest(config: ComposedConfig) -> dict[str, Any]:

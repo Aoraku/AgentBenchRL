@@ -196,12 +196,15 @@ class PPOTrainer:
         evaluation_callback: LeagueEvaluation | None = None,
         event_callback: EventCallback | None = None,
         opponent: OpponentPolicy | None = None,
+        opponent_id: str = "opponent",
     ) -> None:
         self.tianshou_version = version("tianshou")
         if self.tianshou_version != "2.0.1":
             raise RuntimeError("PPO backend requires tianshou==2.0.1")
         if not run_id:
             raise ValueError("run_id must be non-empty")
+        if not opponent_id:
+            raise ValueError("opponent_id must be non-empty")
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
@@ -250,6 +253,7 @@ class PPOTrainer:
         self.evaluation_callback = evaluation_callback
         self.event_callback = event_callback
         self.external_opponent = opponent
+        self.opponent_id = opponent_id
         if (
             opponent is not None
             and callable(getattr(opponent, "act_game_process", None))
@@ -263,6 +267,30 @@ class PPOTrainer:
         self._telemetry_env_step_id = 0
         self._transition_episode_ids: dict[tuple[int, int], str] = {}
         self._create_snapshot(emit=False)
+
+    def initialize_model(self, path: str | Path) -> PolicyCheckpoint:
+        """Warm-start policy/value weights while keeping a fresh PPO optimizer."""
+        checkpoint = PolicyCheckpoint.load(path, map_location=self.network.device)
+        state = checkpoint.trainer_state
+        fingerprint = state.get("game_spec_fingerprint")
+        if fingerprint is not None and fingerprint != _game_spec_fingerprint(
+            self.game_spec
+        ):
+            raise ValueError("initial checkpoint game specification does not match")
+        checkpoint.validate_restore(model=self.network)
+        self.network.load_state_dict(checkpoint.model_state, strict=True)
+        self.opponent_snapshots[0].network.load_state_dict(
+            self.network.state_dict(), strict=True
+        )
+        self._emit(
+            Event(
+                event_type="ppo_model_initialized",
+                run_id=self.run_id,
+                stage="learning",
+                payload={"schema_version": checkpoint.schema_version},
+            )
+        )
+        return checkpoint
 
     def train_iteration(self) -> PPOTrainingMetrics:
         """Collect complete episodes synchronously and perform one PPO update."""
@@ -448,6 +476,7 @@ class PPOTrainer:
                     self.game_factory,
                     controlled_player=episode % 2,
                     opponent=opponent,
+                    opponent_id=self.opponent_id,
                     shaping_beta=self.config.shaping_beta,
                     gamma=self.config.gamma,
                     score_scale=self.config.score_scale,
@@ -659,6 +688,7 @@ class PPOTrainer:
                     self.game_factory,
                     controlled_player=None,
                     opponent=opponent,
+                    opponent_id=self.opponent_id,
                     shaping_beta=self.config.shaping_beta,
                     gamma=self.config.gamma,
                     score_scale=self.config.score_scale,

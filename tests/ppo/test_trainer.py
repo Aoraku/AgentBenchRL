@@ -298,6 +298,41 @@ def test_checkpoint_restore_recovers_model_optimizer_counters_rng_and_snapshots(
         torch.testing.assert_close(parameter, expected_parameters[name], rtol=0, atol=0)
 
 
+def test_model_initialization_loads_weights_into_a_fresh_ppo_run(tmp_path) -> None:
+    source = PPOTrainer(CounterGame, small_config(), seed=21)
+    source.train_iteration()
+    path = tmp_path / "warm-start.pt"
+    source.save_checkpoint(path)
+
+    ledger = EventLedger(tmp_path / "events.jsonl")
+    target = PPOTrainer(
+        CounterGame,
+        small_config(learning_rate=1e-4, entropy_coefficient=0.0),
+        seed=22,
+        ledger=ledger,
+        run_id="warm-start",
+    )
+    target.initialize_model(path)
+
+    assert target.iteration == 0
+    assert target.optimizer_steps == 0
+    assert target.budgets.as_dict()["total"]["optimizer_steps"] == 0
+    assert not target.optimizer.state
+    for name, parameter in target.network.state_dict().items():
+        torch.testing.assert_close(
+            parameter, source.network.state_dict()[name], rtol=0, atol=0
+        )
+        torch.testing.assert_close(
+            target.opponent_snapshots[0].network.state_dict()[name],
+            parameter,
+            rtol=0,
+            atol=0,
+        )
+    assert [event.event_type for event in ledger.read()] == [
+        "ppo_model_initialized"
+    ]
+
+
 @pytest.mark.parametrize(
     "mismatched_config",
     [

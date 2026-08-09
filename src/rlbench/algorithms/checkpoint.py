@@ -109,6 +109,10 @@ class PolicyCheckpoint:
         return value
 
     @property
+    def model_state(self) -> Mapping[str, Any]:
+        return self._payload["model_state"]
+
+    @property
     def replay_state(self) -> Mapping[str, Any]:
         value = self._payload.get("replay_state", {})
         if not isinstance(value, Mapping):

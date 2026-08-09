@@ -1,0 +1,35 @@
+game:
+  max_round: 128
+algorithms:
+  ppo:
+    learning_rate: 0.00002
+    weight_decay: 0.0
+    gamma: 0.99
+    gae_lambda: 0.95
+    clip_epsilon: 0.2
+    value_coefficient: 0.5
+    entropy_coefficient: 0.01
+    max_grad_norm: 0.5
+    hidden_size: 256
+    conv_channels: 64
+    recurrent: false
+    gru_hidden_size: 256
+    vector_envs: 1
+    episodes_per_collect: 16
+    minibatch_size: 64
+    update_repetitions: 4
+    shaping_beta: 1.0
+    score_scale: 513.0
+    snapshot_interval: 5
+    max_snapshots: 4
+    device: cuda
+training:
+  seed: 262801
+  iterations: 10
+evaluation:
+  seeds: [101, 211, 307, 401]
+  move_seconds: 3.0
+resources:
+  sample: true
+run:
+  output_dir: snakego-ppo-human-curriculum
