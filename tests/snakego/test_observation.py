@@ -201,6 +201,12 @@ def test_player_one_rotation_hides_absolute_camp_and_preserves_action_symmetry()
     np.testing.assert_allclose(game_a.observe(0).scalars, game_b.observe(1).scalars)
 
 
+def test_canonical_player_view_has_no_additional_rotation_augmentation() -> None:
+    game = SnakeGoGame()
+
+    assert [symmetry.name for symmetry in game.symmetries()] == ["identity"]
+
+
 @pytest.mark.parametrize(
     ("action", "expected"), [(0, 2), (1, 3), (2, 0), (3, 1), (4, 4), (5, 5)]
 )

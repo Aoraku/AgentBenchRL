@@ -115,6 +115,8 @@ Elo 和胜率是最终优化目标的两个视角。Elo 汇总不同强度对手
 
 SnakeGo 使用 6 个离散动作：右、上、左、下、开火、分裂。合法动作掩码处理反向移动限制、道具库存、长度和最多四蛇约束。
 
+观测已经把双方状态转换到当前玩家的统一坐标系，因此训练数据不再额外旋转 180°；双方等价局面会直接编码为相同张量。
+
 PPO 奖励适配保持为一个可选函数：游戏可实现
 `training_potential(player)` 返回归一化的零和势函数；框架统一计算
 `terminal_outcome + beta * (gamma * potential_next - potential_current)`。

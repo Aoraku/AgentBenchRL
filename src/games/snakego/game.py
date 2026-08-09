@@ -15,7 +15,6 @@ from .engine import SnakeGoEngine
 from .observation import canonical_coordinate, encode_observation
 from .spec import (
     IDENTITY_SYMMETRY,
-    ROTATE_180_SYMMETRY,
     SNAKEGO_SPEC,
     SnakeGoSymmetry,
     canonical_action,
@@ -132,7 +131,7 @@ class SnakeGoGame:
         return SnakeGoGame.from_engine(self.engine.clone())
 
     def symmetries(self) -> Sequence[SnakeGoSymmetry]:
-        return (IDENTITY_SYMMETRY, ROTATE_180_SYMMETRY)
+        return (IDENTITY_SYMMETRY,)
 
     def encode_state_id(self, player: int) -> bytes:
         """Return a canonical exact-state digest independent of process-global IDs."""
