@@ -107,6 +107,16 @@ rlbench train snakego \
   --output runs/snakego-ppo-human
 ```
 
+Every game can use the built-in deterministic random curriculum before moving
+to self-play or a population opponent:
+
+```bash
+rlbench train snakego \
+  --algo ppo \
+  --config configs/experiments/snakego_ppo_baseline.yaml \
+  --opponent random
+```
+
 The selected population, opponent executable, and initialization checkpoint
 are identified by hashes in `events.jsonl`; no machine address is part of the
 experiment interface. A `test_human` entry is rejected by the training command.

@@ -98,6 +98,41 @@ def test_ppo_checkpoints_capture_each_completed_iteration(
     ] == [1, 2]
 
 
+def test_ppo_trains_against_builtin_random_curriculum(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    config = _smoke_config(tmp_path / "random-curriculum.yaml", "ppo")
+    run = tmp_path / "random-curriculum-run"
+
+    assert main(
+        [
+            "train",
+            "snakego",
+            "--algo",
+            "ppo",
+            "--config",
+            str(config),
+            "--output",
+            str(run),
+            "--opponent",
+            "random",
+        ]
+    ) == 0
+    capsys.readouterr()
+    started = next(
+        event
+        for event in EventLedger(run / "events.jsonl").read()
+        if event.event_type == "run_started"
+    )
+    assert started.payload["training_inputs"]["opponent"] == {
+        "agent_id": "random",
+        "agent_hash": "builtin:random-v1",
+        "agent_kind": "builtin",
+        "population_hash": None,
+        "protocol": "local",
+    }
+
+
 @pytest.mark.parametrize(
     ("algorithm", "counter"),
     [("alphazero", "generation"), ("ppo", "iteration")],

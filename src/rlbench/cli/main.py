@@ -71,6 +71,9 @@ def _parser() -> argparse.ArgumentParser:
     train.add_argument("--initialize", help="warm-start PPO model weights")
     train.add_argument("--population", help="training population manifest")
     train.add_argument("--opponent-id", help="train-pool process opponent")
+    train.add_argument(
+        "--opponent", choices=("random",), help="built-in PPO opponent"
+    )
 
     evaluate = commands.add_parser("evaluate", help="evaluate a local checkpoint")
     evaluate.add_argument("game", choices=sorted(GAMES))
@@ -99,6 +102,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             initialize=args.initialize,
             population=args.population,
             opponent_id=args.opponent_id,
+            local_opponent=args.opponent,
         )
     if args.command == "evaluate":
         return _evaluate_command(
@@ -142,6 +146,7 @@ def _train_command(
     initialize: str | Path | None = None,
     population: str | Path | None = None,
     opponent_id: str | None = None,
+    local_opponent: str | None = None,
 ) -> int:
     composed = compose_config(
         config_path,
@@ -156,6 +161,8 @@ def _train_command(
         algorithm=algorithm,
         population=population,
         opponent_id=opponent_id,
+        local_opponent=local_opponent,
+        training_seed=int(composed.canonical["training"]["seed"]),
         initialize=initialize,
         resume=resume,
     )
@@ -541,7 +548,9 @@ class _PPOEvaluationPolicy(DeadlineAwareGamePolicy, DeadlineAwareLocalPolicy):
         self.state = None
         self.prior_state = None
 
-    def __call__(self, observation: Observation, legal_mask: np.ndarray[Any, Any]) -> int:
+    def __call__(
+        self, observation: Observation, legal_mask: np.ndarray[Any, Any]
+    ) -> int:
         decision = self.trainer.select_action_step(
             observation,
             legal_mask,
@@ -614,6 +623,22 @@ class _RandomPolicy:
         del observation
         legal = np.flatnonzero(legal_mask)
         return int(self.rng.choice(legal))
+
+
+class _TrainingRandomPolicy:
+    """Stateless pseudo-random opponent with checkpoint-independent replay."""
+
+    def __init__(self, seed: int) -> None:
+        self.seed = int(seed)
+
+    def __call__(self, observation: Observation, legal_mask: np.ndarray[Any, Any]) -> int:
+        legal = np.flatnonzero(legal_mask)
+        digest = hashlib.sha256(self.seed.to_bytes(8, "big", signed=True))
+        digest.update(np.asarray(observation.planes, dtype=np.float32).tobytes())
+        digest.update(np.asarray(observation.scalars, dtype=np.float32).tobytes())
+        digest.update(np.asarray(legal_mask, dtype=np.bool_).tobytes())
+        index = int.from_bytes(digest.digest()[:8], "big") % len(legal)
+        return int(legal[index])
 
 
 def _evaluate_command(
@@ -948,13 +973,20 @@ def _resolve_training_inputs(
     opponent_id: str | None,
     initialize: str | Path | None,
     resume: str | Path | None,
-) -> tuple[ProcessAgent | None, dict[str, Any]]:
+    local_opponent: str | None = None,
+    training_seed: int = 0,
+) -> tuple[Any, dict[str, Any]]:
     if (population is None) != (opponent_id is None):
         raise ValueError(
             "training population and opponent-id must be provided together"
         )
+    if local_opponent is not None and population is not None:
+        raise ValueError("built-in and population opponents are mutually exclusive")
+    if local_opponent not in (None, "random"):
+        raise ValueError(f"unsupported local training opponent: {local_opponent}")
     if algorithm != "ppo" and any(
-        value is not None for value in (population, opponent_id, initialize)
+        value is not None
+        for value in (population, opponent_id, local_opponent, initialize)
     ):
         raise ValueError("process-opponent and initialization controls require PPO")
     if initialize is not None and resume is not None:
@@ -970,7 +1002,16 @@ def _resolve_training_inputs(
 
     opponent = None
     opponent_record = None
-    if population is not None:
+    if local_opponent == "random":
+        opponent = _TrainingRandomPolicy(training_seed)
+        opponent_record = {
+            "agent_id": "random",
+            "agent_hash": "builtin:random-v1",
+            "agent_kind": "builtin",
+            "population_hash": None,
+            "protocol": "local",
+        }
+    elif population is not None:
         manifest = PopulationManifest.from_yaml(population)
         assert opponent_id is not None
         entry = manifest.entry(opponent_id)

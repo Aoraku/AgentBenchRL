@@ -138,6 +138,45 @@ def test_training_input_controls_are_ppo_only_and_pair_population_identity() -> 
             initialize="checkpoint.pt",
             resume="checkpoint.pt",
         )
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        cli_module._resolve_training_inputs(
+            "snakego",
+            algorithm="ppo",
+            population="population.yaml",
+            opponent_id="rank15",
+            initialize=None,
+            resume=None,
+            local_opponent="random",
+        )
+
+
+def test_builtin_training_random_opponent_is_stateless_and_recorded() -> None:
+    policy, inputs = cli_module._resolve_training_inputs(
+        "snakego",
+        algorithm="ppo",
+        population=None,
+        opponent_id=None,
+        initialize=None,
+        resume=None,
+        local_opponent="random",
+        training_seed=17,
+    )
+    game = cli_module.game_factory("snakego", {"max_round": 2})()
+    game.reset(9)
+    observation = game.observe(game.current_player())
+    mask = game.legal_action_mask()
+
+    assert policy is not None
+    first = policy(observation, mask)
+    assert policy(observation, mask) == first
+    assert mask[first]
+    assert inputs["opponent"] == {
+        "agent_id": "random",
+        "agent_hash": "builtin:random-v1",
+        "agent_kind": "builtin",
+        "population_hash": None,
+        "protocol": "local",
+    }
 
 
 def test_resume_rejects_a_different_process_opponent(tmp_path: Path) -> None:
