@@ -20,7 +20,7 @@ from .state import ItemState
 
 if TYPE_CHECKING:
     from rlbench.algorithms.alphazero import AlphaZeroConfig, MCTS
-    from rlbench.algorithms.ppo_tianshou import PPOTrainer
+    from rlbench.algorithms.ppo_tianshou import ActionMapper, PPOTrainer
 
 
 INFERENCE_BUNDLE_FORMAT = "agentbench-rl-frame-alphazero-inference"
@@ -39,8 +39,14 @@ class OfficialGameOver:
 class OfficialProtocolAdapter:
     """Consume judge messages and emit official framed deterministic decisions."""
 
-    def __init__(self, policy: Any) -> None:
+    def __init__(
+        self,
+        policy: Any,
+        *,
+        action_mapper: ActionMapper | None = None,
+    ) -> None:
         self.policy = policy
+        self.action_mapper = action_mapper
         self.local_player: int | None = None
         self.max_round: int | None = None
         self.game: SnakeGoGame | None = None
@@ -153,11 +159,16 @@ class OfficialProtocolAdapter:
             return int(result.action)
         select_step = getattr(self.policy, "select_action_step", None)
         training_action_mask = getattr(self.game, "training_action_mask", None)
-        mask = (
-            training_action_mask(self.game.current_player())
-            if callable(training_action_mask)
-            else legal_mask
-        )
+        mapping = self._residual_action_mapping()
+        if mapping is not None:
+            mask = np.zeros(len(legal_mask), dtype=np.bool_)
+            mask[: len(mapping)] = True
+        else:
+            mask = (
+                training_action_mask(self.game.current_player())
+                if callable(training_action_mask)
+                else legal_mask
+            )
         if callable(select_step):
             decision = select_step(
                 observation,
@@ -166,13 +177,49 @@ class OfficialProtocolAdapter:
                 state=self.policy_state,
             )
             self.policy_state = decision.state
-            return int(decision.action)
+            return self._mapped_policy_action(mapping, int(decision.action))
         select = getattr(self.policy, "select_action", None)
         if callable(select):
-            return int(select(observation, mask.copy(), deterministic=True))
+            action = int(select(observation, mask.copy(), deterministic=True))
+            return self._mapped_policy_action(mapping, action)
         if callable(self.policy):
-            return int(self.policy(observation, mask.copy()))
+            action = int(self.policy(observation, mask.copy()))
+            return self._mapped_policy_action(mapping, action)
         raise TypeError("policy must be callable or expose deterministic selection")
+
+    def _residual_action_mapping(self) -> tuple[int, ...] | None:
+        if self.action_mapper is None:
+            return None
+        assert self.game is not None
+        player = self.game.current_player()
+        mapping = tuple(
+            int(action) for action in self.action_mapper(self.game, player)
+        )
+        legal_mask = self.game.legal_action_mask()
+        if (
+            not mapping
+            or len(mapping) > len(legal_mask)
+            or len(set(mapping)) != len(mapping)
+            or any(
+                action < 0
+                or action >= len(legal_mask)
+                or not bool(legal_mask[action])
+                for action in mapping
+            )
+        ):
+            raise ValueError("deployment action mapping must be unique and legal")
+        return mapping
+
+    @staticmethod
+    def _mapped_policy_action(
+        mapping: tuple[int, ...] | None,
+        policy_action: int,
+    ) -> int:
+        if mapping is None:
+            return policy_action
+        if policy_action < 0 or policy_action >= len(mapping):
+            raise ValueError("policy emitted an illegal residual action")
+        return mapping[policy_action]
 
 
 def load_alphazero_policy(
@@ -197,6 +244,8 @@ def load_ppo_policy(
     *,
     device: str = "cpu",
     seed: int = 0,
+    action_mapper: ActionMapper | None = None,
+    action_mapper_id: str | None = None,
 ) -> PPOTrainer:
     """Restore PPO actor-critic weights as a deterministic deployment policy."""
     from rlbench.algorithms import PolicyCheckpoint
@@ -211,7 +260,11 @@ def load_ppo_policy(
         lambda: SnakeGoGame({"max_round": 512}),
         config,
         seed=seed,
+        action_mapper=action_mapper,
+        action_mapper_id=action_mapper_id,
     )
+    if checkpoint.trainer_state.get("action_mapper_id") != action_mapper_id:
+        raise ValueError("PPO checkpoint action mapper does not match deployment")
     checkpoint.validate_restore(model=trainer.network)
     checkpoint.restore(model=trainer.network)
     trainer.network.eval()
@@ -280,11 +333,19 @@ def export_alphazero_inference_bundle(
 def export_ppo_inference_bundle(
     checkpoint_path: str | Path,
     output_path: str | Path,
+    *,
+    action_mapper: ActionMapper | None = None,
+    action_mapper_id: str | None = None,
 ) -> Path:
     """Strip PPO optimizer, snapshots, counters, and RNG state for deployment."""
     import torch
 
-    trainer = load_ppo_policy(checkpoint_path, device="cpu")
+    trainer = load_ppo_policy(
+        checkpoint_path,
+        device="cpu",
+        action_mapper=action_mapper,
+        action_mapper_id=action_mapper_id,
+    )
     payload = {
         "format": PPO_INFERENCE_BUNDLE_FORMAT,
         "schema_version": PPO_INFERENCE_BUNDLE_SCHEMA_VERSION,
@@ -295,6 +356,7 @@ def export_ppo_inference_bundle(
             "scalar_names": SNAKEGO_SPEC.observation_spec.scalar_names,
         },
         "config": asdict(trainer.config),
+        "action_mapper_id": trainer.action_mapper_id,
         "model_state": {
             name: tensor.detach().cpu()
             for name, tensor in trainer.network.state_dict().items()
@@ -362,6 +424,8 @@ def load_ppo_inference_bundle(
     *,
     device: str = "cpu",
     seed: int = 0,
+    action_mapper: ActionMapper | None = None,
+    action_mapper_id: str | None = None,
 ) -> PPOTrainer:
     """Restore a compact PPO bundle, including recurrent deployment state."""
     import torch
@@ -378,11 +442,15 @@ def load_ppo_inference_bundle(
     model_state = payload.get("model_state")
     if not isinstance(raw_config, Mapping) or not isinstance(model_state, Mapping):
         raise ValueError("PPO inference bundle is missing config or model state")
+    if payload.get("action_mapper_id") != action_mapper_id:
+        raise ValueError("PPO inference action mapper does not match its bundle")
     config = replace(PPOConfig(**dict(raw_config)), device=device)
     trainer = PPOTrainer(
         lambda: SnakeGoGame({"max_round": 512}),
         config,
         seed=seed,
+        action_mapper=action_mapper,
+        action_mapper_id=action_mapper_id,
     )
     try:
         trainer.network.load_state_dict(dict(model_state), strict=True)
@@ -458,13 +526,14 @@ def _validate_inference_game_spec(raw: object) -> None:
 def run_official_agent(
     policy: Any,
     *,
+    action_mapper: ActionMapper | None = None,
     input_stream: BinaryIO | None = None,
     output_stream: BinaryIO | None = None,
 ) -> OfficialGameOver:
     """Run one official SnakeGo game over exact unframed stdin/stdout messages."""
     source = input_stream if input_stream is not None else sys.stdin.buffer
     destination = output_stream if output_stream is not None else sys.stdout.buffer
-    adapter = OfficialProtocolAdapter(policy)
+    adapter = OfficialProtocolAdapter(policy, action_mapper=action_mapper)
 
     adapter.consume(_read_exact(source, 5))
     item_header = _read_exact(source, 3)

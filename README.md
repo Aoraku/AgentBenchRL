@@ -95,6 +95,11 @@ process opponents continue to exchange canonical game actions.
 The stable mapper ID is stored in every PPO checkpoint and must match on
 resume, preventing a residual policy from being loaded with different action
 semantics.
+For deployment, pass the same mapper and ID to
+`export_ppo_inference_bundle` / `load_ppo_inference_bundle`, then call
+`run_official_agent(policy, action_mapper=mapper)`. The official adapter maps
+the selected residual index back to the canonical game action before sending
+it to the judge.
 
 ## Train and resume
 

@@ -33,7 +33,11 @@ from rlbench.algorithms.alphazero import (
     AlphaZeroTrainer,
     PolicyValueNet,
 )
-from rlbench.algorithms.ppo_tianshou import PPOConfig, PPOTrainer
+from rlbench.algorithms.ppo_tianshou import (
+    PPOConfig,
+    PPOTrainer,
+    PrioritizedActionMapper,
+)
 from rlbench.game import validate_game
 
 
@@ -679,6 +683,30 @@ def test_protocol_ppo_policy_uses_the_training_action_subset(
     )
 
 
+def test_protocol_ppo_policy_maps_residual_action_back_to_game_action() -> None:
+    masks: list[np.ndarray] = []
+    priors: list[int] = []
+
+    def prior(game: SnakeGoGame, player: int) -> int:
+        assert player == game.current_player()
+        action = int(np.flatnonzero(game.legal_action_mask())[-1])
+        priors.append(action)
+        return action
+
+    def policy(observation: Observation, mask: np.ndarray) -> int:
+        del observation
+        masks.append(mask.copy())
+        return 0
+
+    mapper = PrioritizedActionMapper(prior, use_training_mask=False)
+    adapter = OfficialProtocolAdapter(policy, action_mapper=mapper)
+    adapter.consume(_official_config(player=0))
+    outgoing = adapter.consume(_official_items([(8, 8, 0, 4, 2)]))
+
+    assert masks and masks[0].tolist() == [True, True, True, True, False, False]
+    assert outgoing == b"\x00\x00\x00\x01" + bytes((priors[0] + 1,))
+
+
 def test_protocol_adapter_rejects_bad_echo_without_advancing_state() -> None:
     """Accepting a mismatched judge echo silently desynchronizes every later decision."""
     adapter = OfficialProtocolAdapter(lambda observation, mask: int(np.flatnonzero(mask)[0]))
@@ -850,6 +878,54 @@ def test_ppo_checkpoint_and_compact_bundle_preserve_recurrent_policy(
     assert direct.state is not None
     assert compact.state is not None
     assert np.array_equal(direct.state.hidden, compact.state.hidden)
+
+
+def test_ppo_bundle_binds_and_restores_residual_action_mapper(tmp_path: Path) -> None:
+    checkpoint = tmp_path / "snakego-ppo-residual-training.pt"
+    bundle = tmp_path / "snakego-ppo-residual-inference.pt"
+
+    def prior(game: SnakeGoGame, player: int) -> int:
+        assert player == game.current_player()
+        return int(np.flatnonzero(game.training_action_mask(player))[0])
+
+    mapper = PrioritizedActionMapper(prior)
+    config = PPOConfig(
+        hidden_size=8,
+        conv_channels=4,
+        vector_envs=1,
+        episodes_per_collect=1,
+        minibatch_size=1,
+        update_repetitions=1,
+        recurrent=False,
+        device="cpu",
+    )
+    trainer = PPOTrainer(
+        lambda: SnakeGoGame({"max_round": 2}),
+        config,
+        seed=41,
+        action_mapper=mapper,
+        action_mapper_id="snakego-test-prior-v1",
+    )
+    trainer.save_checkpoint(checkpoint)
+
+    export_ppo_inference_bundle(
+        checkpoint,
+        bundle,
+        action_mapper=mapper,
+        action_mapper_id="snakego-test-prior-v1",
+    )
+    restored = load_ppo_inference_bundle(
+        bundle,
+        seed=41,
+        action_mapper=mapper,
+        action_mapper_id="snakego-test-prior-v1",
+    )
+
+    payload = torch.load(bundle, map_location="cpu", weights_only=False)
+    assert payload["action_mapper_id"] == "snakego-test-prior-v1"
+    assert restored.action_mapper_id == "snakego-test-prior-v1"
+    with pytest.raises(ValueError, match="action mapper"):
+        load_ppo_inference_bundle(bundle, seed=41)
 
 
 def test_inference_bundle_rejects_an_observation_schema_mismatch(
