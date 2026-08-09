@@ -696,6 +696,7 @@ class PPOTrainer:
                     shaping_beta=self.config.shaping_beta,
                     gamma=self.config.gamma,
                     score_scale=self.config.score_scale,
+                    opponent_training_actions=self.external_opponent is None,
                     transition_callback=transition_sink,
                 )
             )

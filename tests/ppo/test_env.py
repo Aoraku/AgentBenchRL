@@ -256,8 +256,7 @@ class AdapterPotentialGame(PotentialGame):
 class AdapterActionMaskGame(AlternatingGame):
     def training_action_mask(self, player: int) -> np.ndarray:
         mask = self.legal_action_mask().copy()
-        if player == 0:
-            mask[2] = False
+        mask[2] = False
         return mask
 
 
@@ -326,6 +325,26 @@ def test_game_adapter_can_constrain_only_the_controlled_training_actions() -> No
 
     assert initial["mask"].tolist() == [True, False, False]
     assert opponent_masks == [[False, True, True]]
+
+
+def test_self_play_can_apply_training_actions_to_both_players() -> None:
+    opponent_masks: list[list[bool]] = []
+
+    def opponent(observation: Observation, mask: np.ndarray) -> int:
+        del observation
+        opponent_masks.append(mask.tolist())
+        return int(np.flatnonzero(mask)[0])
+
+    env = GymGameEnv(
+        AdapterActionMaskGame,
+        controlled_player=0,
+        opponent=opponent,
+        opponent_training_actions=True,
+    )
+    env.reset(seed=0)
+    env.step(0)
+
+    assert opponent_masks == [[False, True, False]]
 
 
 def test_masked_actor_critic_masks_logits_before_categorical_sampling() -> None:

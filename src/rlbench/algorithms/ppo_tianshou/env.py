@@ -40,6 +40,7 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
         score_scale: float = 1.0,
         opponent_id: str = "opponent",
         opponent_move_seconds: float | None = None,
+        opponent_training_actions: bool = False,
         transition_callback: TransitionCallback | None = None,
     ) -> None:
         super().__init__()
@@ -53,6 +54,8 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
             raise ValueError("score_scale must be positive")
         if not opponent_id:
             raise ValueError("opponent_id must be non-empty")
+        if not isinstance(opponent_training_actions, bool):
+            raise ValueError("opponent_training_actions must be a boolean")
         if opponent_move_seconds is not None and (
             isinstance(opponent_move_seconds, bool)
             or not isinstance(opponent_move_seconds, (int, float))
@@ -70,6 +73,7 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
         self.score_scale = score_scale
         self.opponent_id = opponent_id
         self.opponent_move_seconds = opponent_move_seconds
+        self.opponent_training_actions = opponent_training_actions
         self.transition_callback = transition_callback
         self._done = False
         self._game_steps = 0
@@ -212,10 +216,17 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
         while not self._done and self.game.current_player() != self.controlled_player:
             observation = self.game.observe(self.game.current_player())
             mask = np.asarray(self.game.legal_action_mask(), dtype=np.bool_)
-            legal = np.flatnonzero(mask)
+            permitted = mask
+            act_game_process = getattr(self.opponent, "act_game_process", None)
+            if self.opponent_training_actions and not callable(act_game_process):
+                training_action_mask = getattr(self.game, "training_action_mask", None)
+                if callable(training_action_mask):
+                    permitted = np.asarray(
+                        training_action_mask(self.game.current_player()), dtype=np.bool_
+                    )
+            legal = np.flatnonzero(permitted)
             if legal.size == 0:
                 raise ValueError("opponent turn has no legal actions")
-            act_game_process = getattr(self.opponent, "act_game_process", None)
             if callable(act_game_process):
                 action = int(
                     act_game_process(
@@ -225,11 +236,11 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
                 )
             else:
                 action = (
-                    int(self.opponent(observation, mask.copy()))
+                    int(self.opponent(observation, permitted.copy()))
                     if self.opponent
                     else int(legal[0])
                 )
-            if action < 0 or action >= self.action_space.n or not bool(mask[action]):
+            if action < 0 or action >= self.action_space.n or not bool(permitted[action]):
                 raise ValueError(f"opponent selected illegal action: {action}")
             records.append(self._apply(action))
         return records
