@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import os
 from pathlib import Path
@@ -132,6 +133,30 @@ def test_official_policy_exchanges_binary_protocol_and_game_lifecycle(
     assert "opponent=03" in policy.stderr
     assert "gameover=11000000040004" in policy.stderr
     assert policy.running is False
+
+
+def test_official_policy_restarts_concurrently_without_executable_copy_races(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "concurrent-population"
+    root.mkdir()
+    manifest = _official_fixture(root)
+
+    def restart(worker: int) -> None:
+        policy = population_module.SnakeGoProcessPolicy(
+            manifest.entries[0], manifest.population_root
+        )
+        try:
+            for episode in range(8):
+                game = SnakeGoGame({"max_round": 1})
+                game.reset(worker * 8 + episode)
+                policy.begin_game(None, manifest.entries[0].agent_id, 0, game)
+                policy.close()
+        finally:
+            policy.close()
+
+    with ThreadPoolExecutor(max_workers=16) as executor:
+        tuple(executor.map(restart, range(16)))
 
 
 def test_population_builder_generates_loadable_disjoint_runtime_manifests(

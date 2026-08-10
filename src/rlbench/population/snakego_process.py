@@ -5,9 +5,7 @@ from __future__ import annotations
 import math
 import os
 import selectors
-import shutil
 import subprocess
-import tempfile
 import threading
 import time
 from pathlib import Path
@@ -32,7 +30,6 @@ class SnakeGoProcessPolicy(ProcessAgent):
         super().__init__(entry, population_root)
         self._side: int | None = None
         self._pending_operation: int | None = None
-        self._launch_directory: Path | None = None
 
     @property
     def running(self) -> bool:
@@ -41,29 +38,19 @@ class SnakeGoProcessPolicy(ProcessAgent):
     def start(self) -> None:
         if self._process is not None:
             return
-        executable_fd, executable, _ = self._open_verified_executable()
+        executable_fd, executable, first_line = self._open_verified_executable()
         try:
-            launch_directory = Path(tempfile.mkdtemp(prefix="rlbench-snakego-agent-"))
-            os.chmod(launch_directory, 0o700)
-            launch_path = launch_directory / "agent"
-            with os.fdopen(os.dup(executable_fd), "rb") as source, launch_path.open(
-                "xb"
-            ) as destination:
-                shutil.copyfileobj(source, destination)
-                destination.flush()
-                os.fsync(destination.fileno())
-            os.chmod(launch_path, 0o700)
-            self._launch_directory = launch_directory
+            command = self._fd_launch_command(executable_fd, first_line)
             self._process = subprocess.Popen(
-                [str(launch_path), *self.entry.command[1:]],
+                [*command, *self.entry.command[1:]],
                 cwd=self.population_root,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 bufsize=0,
+                pass_fds=(executable_fd,),
             )
         except OSError as exc:
-            self._remove_launch_copy()
             raise AgentInfrastructureError(
                 f"failed to launch {self.entry.agent_id} from {executable.name}"
             ) from exc
@@ -207,7 +194,6 @@ class SnakeGoProcessPolicy(ProcessAgent):
             self._stderr_thread.join(timeout=1.0)
         self._process = None
         self._stderr_thread = None
-        self._remove_launch_copy()
 
     def _read_exact(self, byte_count: int, deadline: float) -> bytes:
         process = self._require_process()
@@ -234,14 +220,3 @@ class SnakeGoProcessPolicy(ProcessAgent):
         finally:
             selector.close()
         return bytes(payload)
-
-    def _remove_launch_copy(self) -> None:
-        directory = self._launch_directory
-        self._launch_directory = None
-        if directory is None:
-            return
-        try:
-            (directory / "agent").unlink(missing_ok=True)
-            directory.rmdir()
-        except OSError:
-            pass
