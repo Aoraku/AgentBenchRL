@@ -215,6 +215,34 @@ class GameProcessOpponent:
         self.events.append(("close",))
 
 
+class LifecycleActionMapper:
+    def __init__(self) -> None:
+        self.events: list[tuple[object, ...]] = []
+
+    def begin_game(self, case, mapper_id: str, side: int, game) -> None:
+        self.events.append(("begin", case, mapper_id, side, len(game.moves)))
+
+    def __call__(self, game: AlternatingGame, player: int) -> tuple[int, ...]:
+        mapping = tuple(
+            reversed(
+                [int(action) for action in np.flatnonzero(game.legal_action_mask())]
+            )
+        )
+        self.events.append(("map", player, mapping))
+        return mapping
+
+    def observe_action(self, game, actor: int, action: int) -> None:
+        self.events.append(("observe", actor, action, len(game.moves)))
+
+    def end_game(self, game, result) -> None:
+        self.events.append(
+            ("end", result.valid, result.reason, result.score_player_0, game.outcome(0))
+        )
+
+    def close(self) -> None:
+        self.events.append(("close",))
+
+
 def test_game_process_opponent_receives_complete_episode_lifecycle() -> None:
     """Official process opponents require state initialization and every action."""
     opponent = GameProcessOpponent()
@@ -237,6 +265,31 @@ def test_game_process_opponent_receives_complete_episode_lifecycle() -> None:
         ("observe", 1, 1, 2),
         ("end", True, "completed", 1.0, 1.0),
     ]
+
+
+def test_stateful_action_mapper_receives_complete_episode_lifecycle() -> None:
+    mapper = LifecycleActionMapper()
+    opponent = GameProcessOpponent()
+    env = GymGameEnv(
+        factory(terminal_after=2),
+        controlled_player=0,
+        opponent=opponent,  # type: ignore[arg-type]
+        action_mapper=mapper,
+    )
+
+    env.reset(seed=13)
+    _, _, terminated, truncated, _ = env.step(0)
+
+    assert terminated and not truncated
+    assert mapper.events == [
+        ("begin", None, "action-mapper", 0, 0),
+        ("map", 0, (2, 0)),
+        ("observe", 0, 2, 1),
+        ("observe", 1, 1, 2),
+        ("end", True, "completed", 1.0, 1.0),
+    ]
+    env.close()
+    assert mapper.events[-1] == ("close",)
 
 
 @pytest.mark.parametrize(

@@ -115,6 +115,7 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
         self._episode_index = -1
         self._episode_step = 0
         self._opponent_started = False
+        self._action_mapper_started = False
         self._cached_action_mapping: tuple[int, ...] | None = None
         self._cached_action_mapping_player: int | None = None
 
@@ -150,6 +151,7 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
             if seed is not None
             else int(self.np_random.integers(0, 2**31 - 1))
         )
+        self._finish_action_mapper(terminated=False)
         self._close_game_aware_opponent()
         self.game = self.game_factory()
         self.game.reset(game_seed)
@@ -163,6 +165,15 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
         self._game_steps = 0
         self._episode_step = 0
         self._clear_action_mapping()
+        begin_mapping = getattr(self.action_mapper, "begin_game", None)
+        if callable(begin_mapping):
+            begin_mapping(
+                None,
+                "action-mapper",
+                int(self.controlled_player),
+                self.game,
+            )
+            self._action_mapper_started = True
         reset_opponent = getattr(self.opponent, "reset", None)
         if callable(reset_opponent):
             reset_opponent()
@@ -178,6 +189,7 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
                 )
             except BaseException:
                 self._close_game_aware_opponent()
+                self._finish_action_mapper(terminated=False)
                 raise
         opponent_records = self._advance_opponent()
         if self._done:
@@ -296,6 +308,9 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
     def _apply(self, action: int) -> StepRecord:
         record = self.game.step(action)
         self._clear_action_mapping()
+        observe_mapping = getattr(self.action_mapper, "observe_action", None)
+        if self._action_mapper_started and callable(observe_mapping):
+            observe_mapping(self.game, record.player, record.action)
         observe_action = getattr(self.opponent, "observe_action", None)
         if self._opponent_started and callable(observe_action):
             observe_action(self.game, record.player, record.action)
@@ -303,7 +318,25 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
         if record.terminated or self._game_steps >= self.game.spec.max_episode_steps:
             self._done = True
             self._finish_game_aware_opponent(terminated=record.terminated)
+            self._finish_action_mapper(terminated=record.terminated)
         return record
+
+    def _episode_result(self, *, terminated: bool) -> SimpleNamespace:
+        outcome = self.game.outcome(0) if terminated else None
+        score_player_0 = (
+            1.0
+            if outcome is not None and outcome > 0.0
+            else 0.0
+            if outcome is not None and outcome < 0.0
+            else 0.5
+            if outcome == 0.0
+            else None
+        )
+        return SimpleNamespace(
+            valid=terminated,
+            reason="completed" if terminated else "max_episode_steps",
+            score_player_0=score_player_0,
+        )
 
     def _finish_game_aware_opponent(self, *, terminated: bool) -> None:
         if not self._opponent_started:
@@ -311,26 +344,22 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
         end_game = getattr(self.opponent, "end_game", None)
         try:
             if callable(end_game):
-                outcome = self.game.outcome(0) if terminated else None
-                score_player_0 = (
-                    1.0
-                    if outcome is not None and outcome > 0.0
-                    else 0.0
-                    if outcome is not None and outcome < 0.0
-                    else 0.5
-                    if outcome == 0.0
-                    else None
-                )
                 end_game(
                     self.game,
-                    SimpleNamespace(
-                        valid=terminated,
-                        reason="completed" if terminated else "max_episode_steps",
-                        score_player_0=score_player_0,
-                    ),
+                    self._episode_result(terminated=terminated),
                 )
         finally:
             self._opponent_started = False
+
+    def _finish_action_mapper(self, *, terminated: bool) -> None:
+        if not self._action_mapper_started:
+            return
+        end_game = getattr(self.action_mapper, "end_game", None)
+        try:
+            if callable(end_game):
+                end_game(self.game, self._episode_result(terminated=terminated))
+        finally:
+            self._action_mapper_started = False
 
     def _close_game_aware_opponent(self) -> None:
         if not self._opponent_started:
@@ -343,7 +372,11 @@ class GymGameEnv(gym.Env[dict[str, NDArray[Any]], int]):
             self._opponent_started = False
 
     def close(self) -> None:
+        self._finish_action_mapper(terminated=False)
         self._close_game_aware_opponent()
+        close_mapper = getattr(self.action_mapper, "close", None)
+        if callable(close_mapper):
+            close_mapper()
         super().close()
 
     def _require_controlled_turn(self) -> int:

@@ -95,6 +95,11 @@ process opponents continue to exchange canonical game actions.
 The stable mapper ID is stored in every PPO checkpoint and must match on
 resume, preventing a residual policy from being loaded with different action
 semantics.
+
+Stateful search priors may additionally implement `begin_game`,
+`observe_action`, `end_game`, and `close`. The PPO environment forwards the
+complete episode lifecycle, so an external tree-search process stays
+synchronized even when the learned residual policy overrides its proposal.
 For deployment, pass the same mapper and ID to
 `export_ppo_inference_bundle` / `load_ppo_inference_bundle`, then call
 `run_official_agent(policy, action_mapper=mapper)`. The official adapter maps

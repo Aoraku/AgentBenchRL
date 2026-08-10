@@ -52,7 +52,7 @@ AlphaZero 后端要求游戏可复制、完全可观测、动作离散且轮流�
 
 PPO 后端把平面和标量编码为 masked observation，actor 输出合法动作分布，critic 估计状态价值。棋盘编码器可配置残差块深度，长时序游戏可同时启用 GRU；这些网络容量参数属于统一算法配置。采样器逐局交替控制双方角色，在环境中与固定、随机或联赛对手交互，并使用 clipped policy objective、GAE 和熵正则更新策略。
 
-PPO 可选用 `PrioritizedActionMapper` 训练残差策略。游戏作者提供的 `ActionPrior(game, player)` 可以来自启发式策略、已有 checkpoint 或受预算约束的搜索；框架把先验动作固定放在 residual action 0，并把其余允许动作紧凑排列。学习方和神经网络快照使用同一映射，官方进程对手继续收发规则动作。`action_mapper_id` 写入 checkpoint 和推理包并在恢复时校验，官方协议适配器在发送前把 residual index 映射回规则动作。该接口使 PPO 可以学习“接受先验或覆盖先验”，无需为游戏复制 PPO 训练循环。
+PPO 可选用 `PrioritizedActionMapper` 训练残差策略。游戏作者提供的 `ActionPrior(game, player)` 可以来自启发式策略、已有 checkpoint 或受预算约束的搜索；框架把先验动作固定放在 residual action 0，并把其余允许动作紧凑排列。学习方和神经网络快照使用同一映射，官方进程对手继续收发规则动作。`action_mapper_id` 写入 checkpoint 和推理包并在恢复时校验，官方协议适配器在发送前把 residual index 映射回规则动作。该接口使 PPO 可以学习“接受先验或覆盖先验”，无需为游戏复制 PPO 训练循环。有状态搜索先验还可以实现 `begin_game`、`observe_action`、`end_game` 与 `close`；环境会同步完整对局生命周期，包括 residual policy 覆盖先验后的实际动作。
 
 PPO 对手边界支持无状态观测策略和官方有状态进程。进程对手按局接收初始化、双方动作与终局结果；单个进程绑定单个向量环境，避免并发对局交叉污染协议状态。训练池人类可作为课程对手，测试池人类只用于冻结候选后的评测。
 
