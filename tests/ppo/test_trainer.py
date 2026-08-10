@@ -249,6 +249,37 @@ def test_external_opponent_probability_requires_a_unit_interval(
         PPOConfig(external_opponent_probability=probability)
 
 
+@pytest.mark.parametrize("player", (-1, 2, True))
+def test_training_player_requires_one_role_or_null(player: object) -> None:
+    with pytest.raises(ValueError, match="training_player"):
+        PPOConfig(training_player=player)  # type: ignore[arg-type]
+
+
+def test_training_player_focuses_collection_on_one_role(tmp_path) -> None:
+    ledger = EventLedger(tmp_path / "events.jsonl")
+    trainer = PPOTrainer(
+        CounterGame,
+        small_config(
+            vector_envs=1,
+            episodes_per_collect=4,
+            training_player=1,
+        ),
+        seed=18,
+        ledger=ledger,
+        run_id="ppo-role-curriculum",
+    )
+
+    trainer.train_iteration()
+
+    transitions = [
+        event
+        for event in ledger.read()
+        if event.event_type == "ppo_transition"
+    ]
+    assert len(transitions) == 4
+    assert {event.payload["controlled_player"] for event in transitions} == {1}
+
+
 def test_synchronous_collection_updates_ppo_and_emits_events(tmp_path) -> None:
     """A trainer that only constructs PPO but never collects or updates cannot learn."""
     ledger = EventLedger(tmp_path / "events.jsonl")

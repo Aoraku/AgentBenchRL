@@ -31,6 +31,7 @@ class PPOConfig:
     snapshot_interval: int = 1
     max_snapshots: int = 8
     external_opponent_probability: float = 1.0
+    training_player: int | None = None
     device: str = "cpu"
 
     def __post_init__(self) -> None:
@@ -67,3 +68,8 @@ class PPOConfig:
             raise ValueError("shaping_beta cannot be negative")
         if not 0.0 <= self.external_opponent_probability <= 1.0:
             raise ValueError("external_opponent_probability must be in [0, 1]")
+        if self.training_player is not None and (
+            isinstance(self.training_player, bool)
+            or self.training_player not in (0, 1)
+        ):
+            raise ValueError("training_player must be 0, 1, or null")

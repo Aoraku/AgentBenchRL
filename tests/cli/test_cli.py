@@ -368,6 +368,23 @@ def test_ppo_external_mix_is_canonical_only_when_selected(tmp_path: Path) -> Non
     assert mixed_config.config_hash != legacy_config.config_hash
 
 
+def test_ppo_training_player_is_canonical_only_when_selected(tmp_path: Path) -> None:
+    legacy = _write_yaml(tmp_path / "legacy.yaml", "training:\n  seed: 7\n")
+    focused = _write_yaml(
+        tmp_path / "focused.yaml",
+        "algorithm:\n  training_player: 1\ntraining:\n  seed: 7\n",
+    )
+
+    legacy_config = compose_config(legacy, game="snakego", algorithm="ppo")
+    focused_config = compose_config(focused, game="snakego", algorithm="ppo")
+
+    assert "training_player" not in legacy_config.canonical["algorithm"]
+    assert legacy_config.algorithm_settings().training_player is None
+    assert focused_config.canonical["algorithm"]["training_player"] == 1
+    assert focused_config.algorithm_settings().training_player == 1
+    assert focused_config.config_hash != legacy_config.config_hash
+
+
 def test_alphazero_device_is_validated_and_resolved_for_training(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

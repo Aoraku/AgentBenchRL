@@ -716,7 +716,7 @@ class PPOTrainer:
                 partial(
                     GymGameEnv,
                     self.game_factory,
-                    controlled_player=None,
+                    controlled_player=self.config.training_player,
                     opponent=opponent,
                     opponent_id=training_opponent_id,
                     shaping_beta=self.config.shaping_beta,

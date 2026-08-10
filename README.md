@@ -148,6 +148,11 @@ snapshot self-play, and intermediate values sample between them. Evaluation
 continues to use the selected process opponent, so curriculum training and its
 human gate share one trainer and checkpoint lineage.
 
+Set `algorithm.training_player` to `0` or `1` to concentrate rollout collection
+on a weak role; leave it `null` to alternate both roles. This only changes the
+learning curriculum. Evaluation still alternates roles, so a role-specialized
+run cannot hide a regression on the other side.
+
 Every game can use the built-in deterministic random curriculum before moving
 to self-play or a population opponent:
 

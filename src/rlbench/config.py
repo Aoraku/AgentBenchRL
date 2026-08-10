@@ -156,6 +156,12 @@ def compose_config(
         and "external_opponent_probability" not in selected_algorithm
     ):
         canonical["algorithm"].pop("external_opponent_probability")
+    if (
+        algorithm == "ppo"
+        and "training_player" not in direct_algorithm
+        and "training_player" not in selected_algorithm
+    ):
+        canonical["algorithm"].pop("training_player")
 
     _validate_controls(canonical)
     try:
