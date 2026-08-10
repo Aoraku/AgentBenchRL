@@ -707,6 +707,60 @@ def test_protocol_ppo_policy_maps_residual_action_back_to_game_action() -> None:
     assert outgoing == b"\x00\x00\x00\x01" + bytes((priors[0] + 1,))
 
 
+def test_protocol_ppo_policy_applies_role_specific_logit_biases() -> None:
+    observed_biases: list[np.ndarray] = []
+
+    class BiasAwarePolicy:
+        def select_action_step(
+            self,
+            observation,
+            mask,
+            *,
+            deterministic,
+            state,
+            logit_bias,
+        ):
+            del observation, deterministic, state
+            observed_biases.append(logit_bias.copy())
+            scores = np.where(mask, logit_bias, -np.inf)
+            return type(
+                "Decision",
+                (),
+                {
+                    "action": int(np.argmax(scores)),
+                    "state": None,
+                    "probabilities": np.asarray(mask, dtype=np.float32)
+                    / np.count_nonzero(mask),
+                },
+            )()
+
+    biases = ((0.0, 5.0, 0.0, 0.0, 0.0, 0.0), (0.0,) * 6)
+    mapper = PrioritizedActionMapper(
+        lambda game, player: int(np.flatnonzero(game.legal_action_mask())[0]),
+        use_training_mask=False,
+    )
+    adapter = OfficialProtocolAdapter(
+        BiasAwarePolicy(), action_mapper=mapper, policy_logit_biases=biases
+    )
+    adapter.consume(_official_config(player=0))
+
+    outgoing = adapter.consume(_official_items([(8, 8, 0, 4, 2)]))
+
+    assert observed_biases[0].tolist() == list(biases[0])
+    assert outgoing == b"\x00\x00\x00\x01\x02"
+
+
+@pytest.mark.parametrize(
+    "biases",
+    (((0.0,) * 6,), ((0.0,) * 6, (0.0,) * 5)),
+)
+def test_protocol_adapter_validates_role_logit_bias_shape(biases) -> None:
+    with pytest.raises(ValueError, match="logit biases"):
+        OfficialProtocolAdapter(
+            lambda observation, mask: 0, policy_logit_biases=biases
+        )
+
+
 def test_protocol_adapter_rejects_bad_echo_without_advancing_state() -> None:
     """Accepting a mismatched judge echo silently desynchronizes every later decision."""
     adapter = OfficialProtocolAdapter(lambda observation, mask: int(np.flatnonzero(mask)[0]))

@@ -44,9 +44,28 @@ class OfficialProtocolAdapter:
         policy: Any,
         *,
         action_mapper: ActionMapper | None = None,
+        policy_logit_biases: (
+            tuple[tuple[float, ...], tuple[float, ...]] | None
+        ) = None,
     ) -> None:
         self.policy = policy
         self.action_mapper = action_mapper
+        self.policy_logit_biases = policy_logit_biases
+        if policy_logit_biases is not None:
+            try:
+                biases = np.asarray(policy_logit_biases, dtype=np.float32)
+            except ValueError as exc:
+                raise ValueError(
+                    "policy logit biases must have shape (2, action_count)"
+                ) from exc
+            if biases.shape != (2, len(SNAKEGO_SPEC.action_names)):
+                raise ValueError("policy logit biases must have shape (2, action_count)")
+            if not np.all(np.isfinite(biases)):
+                raise ValueError("policy logit biases must be finite")
+            self.policy_logit_biases = (
+                tuple(float(value) for value in biases[0]),
+                tuple(float(value) for value in biases[1]),
+            )
         self.local_player: int | None = None
         self.max_round: int | None = None
         self.game: SnakeGoGame | None = None
@@ -170,11 +189,19 @@ class OfficialProtocolAdapter:
                 else legal_mask
             )
         if callable(select_step):
+            selection_arguments = {
+                "deterministic": True,
+                "state": self.policy_state,
+            }
+            if self.policy_logit_biases is not None:
+                selection_arguments["logit_bias"] = np.asarray(
+                    self.policy_logit_biases[self.game.current_player()],
+                    dtype=np.float32,
+                )
             decision = select_step(
                 observation,
                 mask.copy(),
-                deterministic=True,
-                state=self.policy_state,
+                **selection_arguments,
             )
             self.policy_state = decision.state
             return self._mapped_policy_action(mapping, int(decision.action))
@@ -527,13 +554,18 @@ def run_official_agent(
     policy: Any,
     *,
     action_mapper: ActionMapper | None = None,
+    policy_logit_biases: tuple[tuple[float, ...], tuple[float, ...]] | None = None,
     input_stream: BinaryIO | None = None,
     output_stream: BinaryIO | None = None,
 ) -> OfficialGameOver:
     """Run one official SnakeGo game over exact unframed stdin/stdout messages."""
     source = input_stream if input_stream is not None else sys.stdin.buffer
     destination = output_stream if output_stream is not None else sys.stdout.buffer
-    adapter = OfficialProtocolAdapter(policy, action_mapper=action_mapper)
+    adapter = OfficialProtocolAdapter(
+        policy,
+        action_mapper=action_mapper,
+        policy_logit_biases=policy_logit_biases,
+    )
 
     adapter.consume(_read_exact(source, 5))
     item_header = _read_exact(source, 3)

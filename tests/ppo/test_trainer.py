@@ -367,6 +367,45 @@ def test_action_distribution_is_normalized_masked_and_deterministic() -> None:
     assert stateful_decision.state is None
 
 
+def test_deployment_logit_bias_changes_distribution_and_action() -> None:
+    trainer = PPOTrainer(CounterGame, small_config(), seed=6)
+    observation, mask = observation_and_mask()
+    baseline = trainer.action_distribution(observation, mask)
+    baseline_action = int(np.argmax(baseline))
+    target_action = 1 - baseline_action
+    bias = np.zeros_like(baseline)
+    bias[target_action] = (
+        np.log(baseline[baseline_action]) - np.log(baseline[target_action]) + 1.0
+    )
+
+    biased = trainer.action_distribution(
+        observation, mask, logit_bias=bias
+    )
+    decision = trainer.select_action_step(
+        observation,
+        mask,
+        deterministic=True,
+        logit_bias=bias,
+    )
+
+    assert biased.sum() == pytest.approx(1.0)
+    assert int(np.argmax(biased)) == target_action
+    assert decision.action == target_action
+    assert decision.probabilities.tolist() == pytest.approx(biased.tolist())
+
+
+@pytest.mark.parametrize(
+    "bias",
+    (np.zeros(1, dtype=np.float32), np.array([0.0, np.nan], dtype=np.float32)),
+)
+def test_deployment_logit_bias_is_validated(bias: np.ndarray) -> None:
+    trainer = PPOTrainer(CounterGame, small_config(), seed=7)
+    observation, mask = observation_and_mask()
+
+    with pytest.raises(ValueError, match="logit bias"):
+        trainer.action_distribution(observation, mask, logit_bias=bias)
+
+
 def test_checkpoint_restore_recovers_model_optimizer_counters_rng_and_snapshots(
     tmp_path,
 ) -> None:

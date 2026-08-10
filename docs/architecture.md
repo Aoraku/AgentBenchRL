@@ -54,6 +54,8 @@ PPO 后端把平面和标量编码为 masked observation，actor 输出合法动
 
 PPO 可选用 `PrioritizedActionMapper` 训练残差策略。游戏作者提供的 `ActionPrior(game, player)` 可以来自启发式策略、已有 checkpoint 或受预算约束的搜索；框架把先验动作固定放在 residual action 0，并把其余允许动作紧凑排列。学习方和神经网络快照使用同一映射，官方进程对手继续收发规则动作。`action_mapper_id` 写入 checkpoint 和推理包并在恢复时校验，官方协议适配器在发送前把 residual index 映射回规则动作。该接口使 PPO 可以学习“接受先验或覆盖先验”，无需为游戏复制 PPO 训练循环。有状态搜索先验还可以实现 `begin_game`、`observe_action`、`end_game` 与 `close`；环境会同步完整对局生命周期，包括 residual policy 覆盖先验后的实际动作。
 
+PPO 推理接口支持与动作数组等长的 logit bias，官方协议适配器支持按玩家填写两行 bias 数组。bias 在合法动作 softmax 上生效，非法动作概率保持为零。对于 residual policy，可只调整 action 0 的 bias，精确控制“接受先验”和“由 PPO 接管”之间的阈值；训练和评测 checkpoint 不需要改写。
+
 PPO 对手边界支持无状态观测策略和官方有状态进程。进程对手按局接收初始化、双方动作与终局结果；单个进程绑定单个向量环境，避免并发对局交叉污染协议状态。训练池人类可作为课程对手，测试池人类只用于冻结候选后的评测。
 
 统一 CLI 可从 population manifest 选择一个训练池进程对手，并在 episode 间自动交替学习方的先后手。PPO checkpoint 可采用两种语义载入：`--resume` 恢复模型、optimizer、计数器、随机数状态和联赛快照；`--initialize` 只复制兼容的模型权重，创建新的 optimizer 和训练计数器，适合行为克隆后进入 PPO 课程训练。输入模型、population 和对手可执行文件以内容哈希记录在事实日志中。

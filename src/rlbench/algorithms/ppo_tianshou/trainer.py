@@ -69,6 +69,26 @@ def _immutable_probabilities(
     return result
 
 
+def _logit_biased_probabilities(
+    probabilities: NDArray[np.float32],
+    logit_bias: NDArray[np.float32] | None,
+) -> NDArray[np.float32]:
+    if logit_bias is None:
+        return probabilities
+    bias = np.asarray(logit_bias, dtype=np.float64)
+    if bias.shape != probabilities.shape:
+        raise ValueError("logit bias must match the action distribution")
+    if not np.all(np.isfinite(bias)):
+        raise ValueError("logit bias must be finite")
+    legal = probabilities > 0.0
+    scores = np.full(probabilities.shape, -np.inf, dtype=np.float64)
+    scores[legal] = np.log(probabilities[legal].astype(np.float64)) + bias[legal]
+    scores[legal] -= np.max(scores[legal])
+    weights = np.zeros(probabilities.shape, dtype=np.float64)
+    weights[legal] = np.exp(scores[legal])
+    return (weights / weights.sum()).astype(np.float32)
+
+
 @dataclass(frozen=True, slots=True)
 class PPORecurrentState:
     """Opaque single-environment actor state carried between deployment calls."""
@@ -395,8 +415,13 @@ class PPOTrainer:
         self,
         observation: Observation,
         legal_mask: NDArray[np.bool_],
+        *,
+        logit_bias: NDArray[np.float32] | None = None,
     ) -> NDArray[np.float32]:
-        return self._network_distribution(self.network, observation, legal_mask)
+        probabilities = self._network_distribution(
+            self.network, observation, legal_mask
+        )
+        return _logit_biased_probabilities(probabilities, logit_bias)
 
     def action_distribution_step(
         self,
@@ -404,6 +429,7 @@ class PPOTrainer:
         legal_mask: NDArray[np.bool_],
         *,
         state: PPORecurrentState | None = None,
+        logit_bias: NDArray[np.float32] | None = None,
     ) -> PPOActionDistribution:
         """Return one deployment distribution and the state for the next decision.
 
@@ -418,7 +444,7 @@ class PPOTrainer:
             state=self._deployment_state_batch(state),
         )
         return PPOActionDistribution(
-            probabilities=probabilities,
+            probabilities=_logit_biased_probabilities(probabilities, logit_bias),
             state=self._deployment_state(next_state),
         )
 
@@ -428,8 +454,11 @@ class PPOTrainer:
         legal_mask: NDArray[np.bool_],
         *,
         deterministic: bool,
+        logit_bias: NDArray[np.float32] | None = None,
     ) -> int:
-        probabilities = self.action_distribution(observation, legal_mask)
+        probabilities = self.action_distribution(
+            observation, legal_mask, logit_bias=logit_bias
+        )
         if deterministic:
             return int(np.argmax(probabilities))
         return int(self.rng.choice(len(probabilities), p=probabilities))
@@ -441,6 +470,7 @@ class PPOTrainer:
         *,
         deterministic: bool,
         state: PPORecurrentState | None = None,
+        logit_bias: NDArray[np.float32] | None = None,
     ) -> PPOActionDecision:
         """Select one deployment action and return state for the next decision.
 
@@ -452,6 +482,7 @@ class PPOTrainer:
             observation,
             legal_mask,
             state=state,
+            logit_bias=logit_bias,
         )
         if deterministic:
             action = int(np.argmax(distribution.probabilities))
