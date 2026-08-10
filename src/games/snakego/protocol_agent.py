@@ -9,6 +9,7 @@ import tempfile
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, BinaryIO, Sequence
 
 import numpy as np
@@ -72,6 +73,7 @@ class OfficialProtocolAdapter:
         self.awaiting_echo: int | None = None
         self.policy_state: object | None = None
         self.game_over: OfficialGameOver | None = None
+        self._action_mapper_started = False
 
     def consume(self, message: bytes) -> bytes | None:
         if self.local_player is None:
@@ -95,7 +97,8 @@ class OfficialProtocolAdapter:
         else:
             if self.game.current_player() == self.local_player:
                 raise ValueError("received an opponent operation during the local turn")
-            self.game.engine.step(operation - 1)
+            actor = self.game.current_player()
+            self._apply_action(canonical_action(operation - 1, actor))
         return self._maybe_choose()
 
     def _consume_config(self, message: bytes) -> None:
@@ -133,6 +136,20 @@ class OfficialProtocolAdapter:
         self.game = SnakeGoGame.from_engine(
             SnakeGoEngine.from_items(items, max_round=self.max_round)
         )
+        begin_mapping = getattr(self.action_mapper, "begin_game", None)
+        if callable(begin_mapping):
+            assert self.local_player is not None
+            try:
+                begin_mapping(
+                    None,
+                    "action-mapper",
+                    self.local_player,
+                    self.game,
+                )
+            except BaseException:
+                self.close()
+                raise
+            self._action_mapper_started = True
 
     def _consume_game_over(self, message: bytes) -> None:
         if len(message) != 7:
@@ -145,6 +162,7 @@ class OfficialProtocolAdapter:
                 int.from_bytes(message[5:7], "big", signed=True),
             ),
         )
+        self._finish_action_mapper()
 
     def _maybe_choose(self) -> bytes | None:
         if (
@@ -159,10 +177,50 @@ class OfficialProtocolAdapter:
         if not isinstance(action, int) or not 0 <= action < 6 or not bool(mask[action]):
             raise ValueError("policy emitted an illegal SnakeGo action")
         absolute_action = canonical_action(action, self.local_player)
-        self.game.engine.step(absolute_action)
+        self._apply_action(action)
         operation = absolute_action + 1
         self.awaiting_echo = operation
         return b"\x00\x00\x00\x01" + bytes((operation,))
+
+    def _apply_action(self, action: int) -> None:
+        assert self.game is not None
+        record = self.game.step(action)
+        observe_mapping = getattr(self.action_mapper, "observe_action", None)
+        if self._action_mapper_started and callable(observe_mapping):
+            observe_mapping(self.game, record.player, record.action)
+
+    def _finish_action_mapper(self) -> None:
+        if not self._action_mapper_started:
+            return
+        assert self.game is not None and self.game_over is not None
+        if self.game_over.winner == 0:
+            score_player_0 = 1.0
+        elif self.game_over.winner == 1:
+            score_player_0 = 0.0
+        else:
+            score_player_0 = 0.5
+        result = SimpleNamespace(
+            valid=self.game_over.result_type != 0x20,
+            reason={0x10: "rule_timeout", 0x11: "illegal_action"}.get(
+                self.game_over.result_type,
+                "completed",
+            ),
+            score_player_0=score_player_0,
+        )
+        end_game = getattr(self.action_mapper, "end_game", None)
+        try:
+            if callable(end_game):
+                end_game(self.game, result)
+        finally:
+            self._action_mapper_started = False
+
+    def close(self) -> None:
+        close_mapper = getattr(self.action_mapper, "close", None)
+        try:
+            if callable(close_mapper):
+                close_mapper()
+        finally:
+            self._action_mapper_started = False
 
     def _policy_action(self) -> int:
         assert self.game is not None
@@ -566,24 +624,26 @@ def run_official_agent(
         action_mapper=action_mapper,
         policy_logit_biases=policy_logit_biases,
     )
-
-    adapter.consume(_read_exact(source, 5))
-    item_header = _read_exact(source, 3)
-    if item_header[0] != 0x10:
-        raise ValueError("official item message must start with 0x10")
-    item_count = int.from_bytes(item_header[1:3], "big", signed=True)
-    if item_count <= 0:
-        raise ValueError("official item count must be positive")
-    outgoing = adapter.consume(item_header + _read_exact(source, 7 * item_count))
-    _write_decision(destination, outgoing)
-
-    while adapter.game_over is None:
-        marker = _read_exact(source, 1)
-        message = marker + _read_exact(source, 6) if marker == b"\x11" else marker
-        outgoing = adapter.consume(message)
+    try:
+        adapter.consume(_read_exact(source, 5))
+        item_header = _read_exact(source, 3)
+        if item_header[0] != 0x10:
+            raise ValueError("official item message must start with 0x10")
+        item_count = int.from_bytes(item_header[1:3], "big", signed=True)
+        if item_count <= 0:
+            raise ValueError("official item count must be positive")
+        outgoing = adapter.consume(item_header + _read_exact(source, 7 * item_count))
         _write_decision(destination, outgoing)
 
-    return adapter.game_over
+        while adapter.game_over is None:
+            marker = _read_exact(source, 1)
+            message = marker + _read_exact(source, 6) if marker == b"\x11" else marker
+            outgoing = adapter.consume(message)
+            _write_decision(destination, outgoing)
+
+        return adapter.game_over
+    finally:
+        adapter.close()
 
 
 def _read_exact(stream: BinaryIO, byte_count: int) -> bytes:

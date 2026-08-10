@@ -707,6 +707,66 @@ def test_protocol_ppo_policy_maps_residual_action_back_to_game_action() -> None:
     assert outgoing == b"\x00\x00\x00\x01" + bytes((priors[0] + 1,))
 
 
+def test_protocol_stateful_action_mapper_receives_official_game_lifecycle() -> None:
+    class StatefulMapper:
+        def __init__(self) -> None:
+            self.side = None
+            self.game = None
+            self.mapping = None
+            self.observed = []
+            self.result = None
+            self.closed = 0
+
+        def begin_game(self, case, mapper_id, side, game) -> None:
+            assert case is None
+            assert mapper_id == "action-mapper"
+            self.side = side
+            self.game = game
+
+        def __call__(self, game, player):
+            assert game is self.game
+            assert player in (0, 1)
+            legal = tuple(int(action) for action in np.flatnonzero(game.legal_action_mask()))
+            self.mapping = legal
+            return legal
+
+        def observe_action(self, game, actor, action) -> None:
+            assert game is self.game
+            self.observed.append((actor, action))
+
+        def end_game(self, game, result) -> None:
+            assert game is self.game
+            self.result = result
+
+        def close(self) -> None:
+            self.closed += 1
+
+    mapper = StatefulMapper()
+    adapter = OfficialProtocolAdapter(
+        lambda observation, mask: 0,
+        action_mapper=mapper,
+    )
+    adapter.consume(_official_config(player=0))
+    outgoing = adapter.consume(_official_items([(8, 8, 0, 4, 2)]))
+
+    assert mapper.side == 0
+    assert mapper.mapping is not None
+    assert outgoing == b"\x00\x00\x00\x01" + bytes((mapper.mapping[0] + 1,))
+    assert mapper.observed == [(0, mapper.mapping[0])]
+
+    adapter.consume(outgoing[-1:])
+    adapter.consume(b"\x03")
+    assert mapper.observed[1] == (1, canonical_action(2, 1))
+
+    adapter.consume(b"\x11\x00\x00\x00\x0a\x00\x08")
+    assert mapper.result.valid is True
+    assert mapper.result.reason == "completed"
+    assert mapper.result.score_player_0 == 1.0
+
+    adapter.close()
+    assert mapper.closed == 1
+
+
 def test_protocol_ppo_policy_applies_role_specific_logit_biases() -> None:
     observed_biases: list[np.ndarray] = []
 
