@@ -50,7 +50,7 @@ flowchart LR
 
 AlphaZero 后端要求游戏可复制、完全可观测、动作离散且轮流行动。策略价值网络同时输出合法动作策略和当前玩家视角的局面价值。MCTS 使用网络先验扩展搜索树，自博弈结果写入 replay；完整专家轨迹可通过统一的 `ExpertTrajectory(seed, actions, train_players)` 接口重建观测、合法动作掩码和终局价值。`train_players` 只保留指定教师侧的策略目标，另一侧动作仍用于精确重建局面和终局结果。
 
-PPO 后端把平面和标量编码为 masked observation，actor 输出合法动作分布，critic 估计状态价值。棋盘编码器可配置残差块深度，长时序游戏可同时启用 GRU；这些网络容量参数属于统一算法配置。采样器逐局交替控制双方角色，在环境中与固定、随机或联赛对手交互，并使用 clipped policy objective、GAE 和熵正则更新策略。
+PPO 后端把平面和标量编码为 masked observation，actor 输出合法动作分布，critic 估计状态价值。棋盘编码器可配置残差块深度，长时序游戏可同时启用 GRU；这些网络容量参数属于统一算法配置。采样器默认逐局交替控制双方角色，也可通过 `training_player` 将 rollout 集中到弱势角色；评测仍强制双方换位。在环境中，学习方与固定、随机或联赛对手交互，并使用 clipped policy objective、GAE 和熵正则更新策略。
 
 PPO 可选用 `PrioritizedActionMapper` 训练残差策略。游戏作者提供的 `ActionPrior(game, player)` 可以来自启发式策略、已有 checkpoint 或受预算约束的搜索；框架把先验动作固定放在 residual action 0，并把其余允许动作紧凑排列。学习方和神经网络快照使用同一映射，官方进程对手继续收发规则动作。`action_mapper_id` 写入 checkpoint 和推理包并在恢复时校验，官方协议适配器在发送前把 residual index 映射回规则动作。该接口使 PPO 可以学习“接受先验或覆盖先验”，无需为游戏复制 PPO 训练循环。有状态搜索先验还可以实现 `begin_game`、`observe_action`、`end_game` 与 `close`；环境会同步完整对局生命周期，包括 residual policy 覆盖先验后的实际动作。
 
