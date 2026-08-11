@@ -15,7 +15,7 @@ from rlbench.telemetry import EventLedger
 
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = ROOT / "scripts" / "run_snakego_task10.py"
+SCRIPT = ROOT / "src" / "games" / "snakego" / "scripts" / "run_snakego_task10.py"
 
 
 def _run(*arguments: str) -> dict[str, object]:
@@ -71,7 +71,7 @@ def _tiny_config(
 
 
 def _tiny_two_checkpoint_run(tmp_path: Path) -> tuple[Path, Path]:
-    from rlbench.experiments import Task10Stage, run_task10_workflow
+    from games.snakego.experiments import Task10Stage, run_task10_workflow
 
     config = _tiny_config(tmp_path / "tiny.yaml")
     run_dir = tmp_path / "run"
@@ -366,7 +366,7 @@ def test_task10_workflow_runs_real_stages_resumes_and_is_idempotent(
     tmp_path: Path,
 ) -> None:
     """A metadata-only plan would not create real optimizer/checkpoint facts."""
-    from rlbench.experiments import Task10Stage, run_task10_workflow
+    from games.snakego.experiments import Task10Stage, run_task10_workflow
 
     config = _tiny_config(tmp_path / "tiny.yaml")
     stages = (
@@ -415,7 +415,7 @@ def test_task10_workflow_runs_real_stages_resumes_and_is_idempotent(
 def test_task10_workflow_rejects_state_budget_tampering_before_resume(
     tmp_path: Path,
 ) -> None:
-    from rlbench.experiments import Task10Stage, run_task10_workflow
+    from games.snakego.experiments import Task10Stage, run_task10_workflow
 
     config = _tiny_config(tmp_path / "tiny.yaml")
     stages = (
@@ -445,7 +445,7 @@ def test_task10_workflow_upgrades_version_one_state_during_resume(
     tmp_path: Path,
 ) -> None:
     """A durable round-two state must remain resumable under the richer journal."""
-    from rlbench.experiments import Task10Stage, run_task10_workflow
+    from games.snakego.experiments import Task10Stage, run_task10_workflow
 
     config = _tiny_config(tmp_path / "tiny.yaml")
     stages = (
@@ -486,8 +486,8 @@ def test_task10_workflow_recovers_committed_stage_after_state_write_crash(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import rlbench.experiments.snakego_task10 as workflow_module
-    from rlbench.experiments import Task10Stage, run_task10_workflow
+    import games.snakego.experiments.snakego_task10 as workflow_module
+    from games.snakego.experiments import Task10Stage, run_task10_workflow
 
     config = _tiny_config(tmp_path / "tiny.yaml")
     stages = (Task10Stage(1, "selfplay", 1, 1, None),)
@@ -534,8 +534,8 @@ def test_task10_workflow_retries_after_crash_before_attempt_journal(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import rlbench.experiments.snakego_task10 as workflow_module
-    from rlbench.experiments import Task10Stage, run_task10_workflow
+    import games.snakego.experiments.snakego_task10 as workflow_module
+    from games.snakego.experiments import Task10Stage, run_task10_workflow
 
     config = _tiny_config(tmp_path / "tiny.yaml")
     stages = (Task10Stage(1, "selfplay", 1, 1, None),)
@@ -562,7 +562,7 @@ def test_task10_workflow_aborts_journal_only_attempt_and_retries_fresh(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import rlbench.cli.main as cli_module
-    from rlbench.experiments import Task10Stage, run_task10_workflow
+    from games.snakego.experiments import Task10Stage, run_task10_workflow
 
     config = _tiny_config(tmp_path / "tiny.yaml")
     stages = (Task10Stage(1, "selfplay", 1, 1, None),)
@@ -602,7 +602,7 @@ def test_task10_workflow_recovers_exclusive_checkpoint_without_saved_event(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from rlbench.experiments import Task10Stage, run_task10_workflow
+    from games.snakego.experiments import Task10Stage, run_task10_workflow
     from rlbench.telemetry import EventLedger
 
     config = _tiny_config(tmp_path / "tiny.yaml")
@@ -719,7 +719,7 @@ def test_expert_timeout_durably_records_attempt_resources_without_checkpoint(
 def test_timed_out_attempt_updates_state_and_reduces_retry_ceiling_once(
     tmp_path: Path,
 ) -> None:
-    from rlbench.experiments import Task10Stage, run_task10_workflow
+    from games.snakego.experiments import Task10Stage, run_task10_workflow
     from rlbench.telemetry import Event
 
     config = _tiny_config(tmp_path / "tiny.yaml")
@@ -822,8 +822,8 @@ def test_timed_out_attempt_updates_state_and_reduces_retry_ceiling_once(
 def test_task10_workflow_rejects_concurrent_stage_attempt(
     tmp_path: Path,
 ) -> None:
-    import rlbench.experiments.snakego_task10 as workflow_module
-    from rlbench.experiments import Task10Stage, run_task10_workflow
+    import games.snakego.experiments.snakego_task10 as workflow_module
+    from games.snakego.experiments import Task10Stage, run_task10_workflow
 
     config = _tiny_config(tmp_path / "tiny.yaml")
     run_dir = tmp_path / "run"
@@ -839,8 +839,8 @@ def test_task10_workflow_rejects_concurrent_stage_attempt(
 def test_task10_workflow_cleans_committed_attempt_after_state_replace_crash(
     tmp_path: Path,
 ) -> None:
-    import rlbench.experiments.snakego_task10 as workflow_module
-    from rlbench.experiments import Task10Stage, run_task10_workflow
+    import games.snakego.experiments.snakego_task10 as workflow_module
+    from games.snakego.experiments import Task10Stage, run_task10_workflow
 
     config = _tiny_config(tmp_path / "tiny.yaml")
     run_dir = tmp_path / "run"

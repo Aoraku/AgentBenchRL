@@ -7,7 +7,7 @@ import argparse
 import json
 from pathlib import Path
 
-from rlbench.experiments.evidence import extract_continuation_accounting
+from games.snakego.experiments.evidence import extract_continuation_accounting
 
 
 def main() -> None:

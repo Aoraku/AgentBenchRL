@@ -69,7 +69,7 @@ def test_raw_evidence_extractor_preserves_moves_hashes_and_source_provenance(
     tmp_path: Path,
 ) -> None:
     """Summary-only output cannot audit actions or trace facts to source events."""
-    from rlbench.experiments.evidence import extract_evaluation_evidence
+    from games.snakego.experiments.evidence import extract_evaluation_evidence
 
     candidate_hash = "sha256:" + "2" * 64
     history_hash = "sha256:" + "5" * 64
@@ -226,7 +226,7 @@ def test_raw_evidence_rejects_opponent_identity_supplied_only_by_metadata(
     tmp_path: Path,
 ) -> None:
     """A sidecar label cannot prove an opponent's immutable bytes or split role."""
-    from rlbench.experiments.evidence import extract_evaluation_evidence
+    from games.snakego.experiments.evidence import extract_evaluation_evidence
 
     candidate_hash = "sha256:" + "a" * 64
     opponent_hash = "sha256:" + "b" * 64
@@ -326,7 +326,7 @@ def test_evidence_authority_rejects_forged_or_incomplete_sidecar_facts(
     case: str,
     message: str,
 ) -> None:
-    from rlbench.experiments.evidence import _resolve_evidence_authority
+    from games.snakego.experiments.evidence import _resolve_evidence_authority
 
     candidate_hash = "sha256:" + "a" * 64
     opponent_hash = "sha256:" + "b" * 64
@@ -402,7 +402,7 @@ def test_raw_evidence_recursively_rejects_paths_hosts_and_credentials(
     unsafe: object,
 ) -> None:
     """Nested path and connection details must never survive in a preimage."""
-    from rlbench.experiments.evidence import _reject_absolute_paths
+    from games.snakego.experiments.evidence import _reject_absolute_paths
 
     with pytest.raises(ValueError, match="unsafe path or connection detail"):
         _reject_absolute_paths({"nested": [unsafe]})
@@ -412,7 +412,7 @@ def test_raw_evidence_extractor_rejects_action_trace_disagreement(
     tmp_path: Path,
 ) -> None:
     """A match action list that disagrees with move facts is not auditable."""
-    from rlbench.experiments.evidence import extract_evaluation_evidence
+    from games.snakego.experiments.evidence import extract_evaluation_evidence
 
     candidate_hash = "sha256:" + "c" * 64
     history_hash = "sha256:" + "e" * 64
@@ -512,7 +512,7 @@ def test_raw_evidence_extractor_rejects_action_trace_disagreement(
 def test_raw_evidence_extractor_cross_checks_source_completion_facts(
     tmp_path: Path,
 ) -> None:
-    from rlbench.experiments.evidence import extract_evaluation_evidence
+    from games.snakego.experiments.evidence import extract_evaluation_evidence
 
     case_hash = "sha256:" + "a" * 64
     events = [
@@ -594,7 +594,7 @@ def test_raw_evidence_extractor_cross_checks_source_completion_facts(
 def test_raw_evidence_extractor_rejects_paths_in_any_persisted_metadata(
     tmp_path: Path,
 ) -> None:
-    from rlbench.experiments.evidence import extract_evaluation_evidence
+    from games.snakego.experiments.evidence import extract_evaluation_evidence
 
     metadata = tmp_path / "metadata.json"
     metadata.write_text(
@@ -633,7 +633,7 @@ def test_raw_evidence_extractor_rejects_overlapping_source_disagreement(
     mismatch: str,
     message: str,
 ) -> None:
-    from rlbench.experiments.evidence import extract_evaluation_evidence
+    from games.snakego.experiments.evidence import extract_evaluation_evidence
 
     candidate_hash = "sha256:" + "a" * 64
     opponent_hash = "sha256:" + "b" * 64
@@ -739,7 +739,7 @@ def test_raw_evidence_extractor_rejects_overlapping_source_disagreement(
 def test_continuation_accounting_is_derived_from_checkpoint_event_preimages(
     tmp_path: Path,
 ) -> None:
-    from rlbench.experiments.evidence import extract_continuation_accounting
+    from games.snakego.experiments.evidence import extract_continuation_accounting
 
     events = [
         _event(
@@ -802,7 +802,7 @@ def test_checkpoint_league_runs_real_side_swapped_training_evaluation(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Learned bootstrap/history baselines must be real checkpoint policies."""
-    from rlbench.experiments.checkpoint_league import evaluate_checkpoint_league
+    from games.snakego.experiments.checkpoint_league import evaluate_checkpoint_league
 
     config = tmp_path / "tiny.yaml"
     config.write_text(

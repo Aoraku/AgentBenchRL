@@ -69,7 +69,8 @@ def build(directory: Path) -> None:
     plt.close(figure)
 
     manifest = directory / "SHA256SUMS"
-    repository_root = Path(__file__).resolve().parents[1]
+    # src/games/snakego/scripts/<file> -> repository root is four levels up.
+    repository_root = Path(__file__).resolve().parents[4]
     paths = sorted(
         path
         for path in directory.iterdir()
@@ -96,7 +97,7 @@ def main() -> None:
     parser.add_argument(
         "--directory",
         type=Path,
-        default=Path(__file__).resolve().parents[1] / "results/snakego",
+        default=Path(__file__).resolve().parents[4] / "results/snakego",
     )
     args = parser.parse_args()
     build(args.directory.resolve())

@@ -15,7 +15,8 @@ from typing import Any, Sequence
 from uuid import uuid4
 
 
-ROOT = Path(__file__).resolve().parents[1]
+# src/games/snakego/scripts/<file> -> repository root is four levels up.
+ROOT = Path(__file__).resolve().parents[4]
 AZ_CONFIG = ROOT / "configs/experiments/snakego_task10_alphazero_locked.yaml"
 PPO_CONFIG = ROOT / "configs/experiments/snakego_task10_ppo_locked.yaml"
 EXPERT_CONTROLS = {
@@ -80,7 +81,7 @@ def _print(value: Any) -> None:
 
 
 def _plan() -> dict[str, Any]:
-    from rlbench.experiments import task10_plan_payload
+    from games.snakego.experiments import task10_plan_payload
 
     return {
         "alphazero_config": str(AZ_CONFIG.relative_to(ROOT)),
@@ -130,7 +131,7 @@ def _evaluate(checkpoint: Path, population: Path, seeds: str) -> int:
 def _expert_generation(args: argparse.Namespace) -> dict[str, Any]:
     if getattr(args, "workflow_lock_held", False):
         return _expert_generation_unlocked(args)
-    from rlbench.experiments.snakego_task10 import _workflow_lock
+    from games.snakego.experiments.snakego_task10 import _workflow_lock
 
     with _workflow_lock(args.run_dir.resolve()):
         return _expert_generation_unlocked(args)
@@ -332,7 +333,7 @@ def _expert_generation_unlocked(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _workflow(args: argparse.Namespace) -> dict[str, Any]:
-    from rlbench.experiments import run_task10_workflow
+    from games.snakego.experiments import run_task10_workflow
 
     opponent_ids = {
         "rank5": args.rank5,

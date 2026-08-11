@@ -7,7 +7,7 @@ import argparse
 import json
 from pathlib import Path
 
-from rlbench.experiments.checkpoint_league import evaluate_checkpoint_league
+from games.snakego.experiments.checkpoint_league import evaluate_checkpoint_league
 
 
 def main() -> None:
