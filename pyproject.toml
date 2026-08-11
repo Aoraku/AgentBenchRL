@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11,<3.14"
 license = "MIT"
 license-files = ["LICENSE", "LICENSES/*.txt"]
-authors = [{ name = "Qingle", email = "lql24@mails.tsinghua.edu.cn" }]
+authors = [{ name = "Qingle" }]
 keywords = ["reinforcement-learning", "benchmark", "alphazero", "ppo", "snakego"]
 classifiers = [
     "Development Status :: 3 - Alpha",
