@@ -341,6 +341,14 @@ facts:
 rlbench report runs/snakego-az
 ```
 
+Alongside the native `report/summary.json`, this also writes
+`report/summary.schema.json`, an additive projection onto the shared
+cross-repository metrics contract (`AgentBench/docs/metrics-schema.md`) so runs
+can be aggregated on common axes. Unmeasured or inapplicable metrics are
+recorded as `null`, never 0. See
+[`docs/metrics-schema-mapping.md`](docs/metrics-schema-mapping.md) for the
+field mapping.
+
 ## Official SnakeGo submission wrapper
 
 A compact inference bundle omits replay, optimizer, trainer, and RNG state while

@@ -215,6 +215,23 @@ def generate_report(run_directory: str | Path) -> Path:
         encoding="utf-8",
     )
 
+    # Additive cross-repository export: a summary conforming to the shared
+    # metrics-schema so A's reporting can aggregate RL runs alongside HL runs.
+    schema_summary = _schema_summary(
+        run_dir=run_dir,
+        events=events,
+        learner=learner,
+        checkpoints=checkpoints,
+        elo_rows=elo_rows,
+        win_rows=win_rows,
+        ig_rows=ig_rows,
+        outcomes_by_checkpoint=outcomes_by_checkpoint,
+    )
+    (report_dir / "summary.schema.json").write_text(
+        json.dumps(schema_summary, allow_nan=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
     _plots(
         report_dir,
         checkpoints=checkpoints,
@@ -574,6 +591,164 @@ def _resource_rows(events: Iterable[Event]) -> list[dict[str, Any]]:
             }
         )
     return rows
+
+
+def _schema_budget(
+    checkpoint: Mapping[str, Any] | None,
+    *,
+    kind: str,
+) -> dict[str, Any]:
+    """Map RL budgets onto the shared metrics-schema budget object.
+
+    Token dimensions do not apply to RL and are recorded as ``null`` rather
+    than 0, per the shared missing-value rule; only ``wall_time_s`` is filled.
+    """
+    wall_field = {
+        "learning": "learning_wall_seconds",
+        "evaluation": "evaluation_wall_seconds",
+        "total": "wall_seconds",
+    }[kind]
+    wall_time = None if checkpoint is None else checkpoint.get(wall_field)
+    return {
+        "input_tokens": None,
+        "cached_input_tokens": None,
+        "output_tokens": None,
+        "reasoning_tokens": None,
+        "total_tokens": None,
+        "wall_time_s": wall_time,
+    }
+
+
+def _h2h(
+    outcomes_by_checkpoint: Mapping[int, list[MatchOutcome]],
+    *,
+    learner: str,
+) -> dict[str, float | None]:
+    """Learner win rate against each opponent from the final evaluated checkpoint."""
+    if not outcomes_by_checkpoint:
+        return {}
+    final_index = max(outcomes_by_checkpoint)
+    tally: dict[str, list[float]] = defaultdict(list)
+    for outcome in outcomes_by_checkpoint[final_index]:
+        if not outcome.valid:
+            continue
+        if outcome.player_a == learner:
+            opponent, learner_score = outcome.player_b, outcome.score_a
+        elif outcome.player_b == learner:
+            opponent, learner_score = outcome.player_a, 1.0 - outcome.score_a
+        else:
+            continue
+        tally[opponent].append(learner_score)
+    return {
+        opponent: (sum(scores) / len(scores) if scores else None)
+        for opponent, scores in sorted(tally.items())
+    }
+
+
+def _git_commit(run_dir: Path) -> str | None:
+    manifest_path = run_dir / "run_manifest.json"
+    if not manifest_path.is_file():
+        return None
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    software = manifest.get("software") if isinstance(manifest, Mapping) else None
+    if isinstance(software, Mapping):
+        commit = software.get("git_commit")
+        if isinstance(commit, str) and commit:
+            return commit
+    return None
+
+
+def _schema_summary(
+    *,
+    run_dir: Path,
+    events: tuple[Event, ...],
+    learner: str,
+    checkpoints: list[dict[str, Any]],
+    elo_rows: list[dict[str, Any]],
+    win_rows: list[dict[str, Any]],
+    ig_rows: list[dict[str, Any]],
+    outcomes_by_checkpoint: Mapping[int, list[MatchOutcome]],
+) -> dict[str, Any]:
+    """Project the native report onto the shared metrics-schema summary.
+
+    This is an additive export for A's ``reporting/aggregate.py``; it never
+    replaces the native ``summary.json``. Any metric the RL runs do not
+    measure (RL has no raw/evo behavioural curves, no token budgets, and no
+    per-side Elo for a single learner) is recorded as ``null``, never 0.
+    """
+    manifest_game = None
+    run_type = "eval"
+    for event in events:
+        if event.event_type == "run_started":
+            manifest_game = event.payload.get("game")
+            break
+
+    learner_elo = [row for row in elo_rows if row["player"] == learner]
+    elo_history = [
+        {
+            "checkpoint_index": row["checkpoint_index"],
+            "rating": row["rating"],
+            "uncertainty": row["uncertainty"],
+        }
+        for row in learner_elo
+    ]
+    ratings = [row["rating"] for row in learner_elo if row["rating"] is not None]
+    best_elo = max(ratings) if ratings else None
+    final_elo = learner_elo[-1]["rating"] if learner_elo else None
+
+    final_win = win_rows[-1] if win_rows else None
+    win_rate = final_win["score"] if final_win else None
+    score_margin = None if win_rate is None else (2.0 * win_rate - 1.0)
+
+    final_checkpoint = checkpoints[-1] if checkpoints else None
+    wall_seconds = (
+        None if final_checkpoint is None else final_checkpoint.get("wall_seconds")
+    )
+    wall_hours = None if wall_seconds is None else wall_seconds / 3600.0
+    total_steps = (
+        None if final_checkpoint is None else final_checkpoint.get("env_steps")
+    )
+
+    # Behavioural information gain: C measures per-decision policy KL (nats).
+    # A's AUC_gain is the area under that gain curve; AUC_raw/AUC_evo have no
+    # RL counterpart and stay null rather than being coerced to 0.
+    gain_records = [
+        {"checkpoint_index": row["checkpoint_index"], "gain": row["nats_per_decision"]}
+        for row in ig_rows
+        if row.get("nats_per_decision") is not None
+    ]
+    auc_gain = None
+    if len(gain_records) >= 2:
+        curve = build_curve(gain_records, x_axis="checkpoint_index", y_axis="gain")
+        auc_gain = trapezoid_auc(curve).value
+
+    return {
+        "schema_version": "1.0",
+        "run_type": run_type,
+        "game": manifest_game,
+        "agent": learner,
+        "created": events[0].created_at.isoformat() if events[0].created_at else None,
+        "git_commit": _git_commit(run_dir),
+        "best_elo": best_elo,
+        "final_elo": final_elo,
+        "elo_p0": final_elo,
+        "elo_p1": None,
+        "win_rate": win_rate,
+        "score_margin": score_margin,
+        "wall_hours": wall_hours,
+        "total_steps": total_steps,
+        "AUC_raw": None,
+        "AUC_evo": None,
+        "AUC_gain": auc_gain,
+        "budget_learning": _schema_budget(final_checkpoint, kind="learning"),
+        "budget_evaluation": _schema_budget(final_checkpoint, kind="evaluation"),
+        "budget_total": _schema_budget(final_checkpoint, kind="total"),
+        "elo_history": elo_history,
+        "h2h": _h2h(outcomes_by_checkpoint, learner=learner),
+    }
 
 
 def _availability(available: bool, reason: str) -> dict[str, Any]:

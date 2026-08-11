@@ -22,6 +22,14 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The CLI (`rlbench.cli.main`) was split into focused subcommand and helper
   modules with an unchanged public import surface.
 
+### Added
+
+- `rlbench report` additionally writes `report/summary.schema.json`, an
+  additive projection onto the shared cross-repository metrics contract
+  (`AgentBench/docs/metrics-schema.md`) so RL runs aggregate alongside other
+  producers. Unmeasured or inapplicable metrics are recorded as `null`, never
+  0. Field mapping documented in `docs/metrics-schema-mapping.md`.
+
 ### Documentation
 
 - `results/` and `reports/` are documented as committed, content-addressed
