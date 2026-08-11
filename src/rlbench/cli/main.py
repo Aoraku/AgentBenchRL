@@ -47,9 +47,13 @@ from rlbench.population import (
     PopulationManifest,
     ProcessAgent,
     ProcessMoveTimeout,
-    SnakeGoProcessPolicy,
 )
-from rlbench.registry import ALGORITHMS, GAMES, game_factory
+from rlbench.registry import (
+    ALGORITHMS,
+    GAMES,
+    game_factory,
+    official_process_factory,
+)
 from rlbench.reporting import generate_report
 from rlbench.telemetry import BudgetCounters, Event, EventLedger, ResourceSampler
 
@@ -957,11 +961,19 @@ def _evaluate_command(
 def _population_policy(
     entry: PopulationEntry, population_root: str | Path, *, game_name: str
 ) -> ProcessAgent:
-    """Construct the process boundary declared by one immutable manifest entry."""
-    if entry.protocol == "snakego_official":
-        if game_name != "snakego":
-            raise ValueError("snakego_official agents require the SnakeGo game")
-        return SnakeGoProcessPolicy(entry, population_root)
+    """Construct the process boundary declared by one immutable manifest entry.
+
+    Game-specific wire protocols are self-declared by the game plugin. The CLI
+    asks the registry for a handler matching ``entry.protocol`` and falls back
+    to the generic line-JSON ``ProcessAgent`` for the default protocol.
+    """
+    if entry.protocol != "line_json":
+        handler = official_process_factory(game_name, entry.protocol)
+        if handler is None:
+            raise ValueError(
+                f"game {game_name!r} does not declare protocol {entry.protocol!r}"
+            )
+        return handler(entry, population_root)
     return ProcessAgent(entry, population_root)
 
 

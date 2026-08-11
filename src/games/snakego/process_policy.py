@@ -11,14 +11,13 @@ import time
 from pathlib import Path
 from typing import Any
 
-from games.snakego.spec import canonical_action
-
-from .manifest import PopulationEntry
-from .process_agent import (
+from rlbench.population import (
     AgentInfrastructureError,
+    PopulationEntry,
     ProcessAgent,
-    ProcessMoveTimeout,
 )
+
+from .spec import canonical_action
 
 
 class SnakeGoProcessPolicy(ProcessAgent):

@@ -12,7 +12,7 @@ from typing import Any, Mapping
 
 import yaml
 
-from rlbench.registry import ALGORITHM_CONFIGS, GAMES
+from rlbench.registry import ALGORITHM_CONFIGS, GAMES, game_config_schema
 
 
 class ConfigError(ValueError):
@@ -34,7 +34,6 @@ _EVALUATION_DEFAULTS: dict[str, Any] = {
 }
 _RESOURCE_DEFAULTS: dict[str, Any] = {"sample": True}
 _RUN_DEFAULTS: dict[str, Any] = {"output_dir": "runs"}
-_GAME_SCHEMAS: dict[str, dict[str, Any]] = {"snakego": {"max_round": 512}}
 _TOP_LEVEL = {
     "game",
     "algorithm",
@@ -105,7 +104,7 @@ def compose_config(
         raise ConfigError(f"unknown configuration key: {sorted(unknown_top)[0]}")
 
     defaults: dict[str, dict[str, Any]] = {
-        "game": dict(_GAME_SCHEMAS[game]),
+        "game": dict(game_config_schema(game)),
         "algorithm": asdict(ALGORITHM_CONFIGS[algorithm]()),
         "training": dict(_TRAINING_DEFAULTS),
         "evaluation": dict(_EVALUATION_DEFAULTS),
