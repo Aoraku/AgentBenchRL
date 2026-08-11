@@ -367,3 +367,15 @@ Population runtime manifests add executable SHA-256, archive SHA-256,
 full-source-tree SHA-256, build-recipe SHA-256, roles, and per-move limits.
 Infrastructure-invalid games remain invalid facts; rule timeouts and illegal
 actions remain valid game losses.
+
+### Committed audit evidence
+
+`results/` and `reports/` are not scratch output. They hold the committed,
+content-addressed audit evidence for the SnakeGo Task-10 study:
+`results/snakego/SHA256SUMS` pins every evidence file (moves, matches,
+evaluations, promotion facts, strength curves), and both directories are
+required by the reproducibility tests and the release extractor. They are
+therefore deliberately tracked and excluded from `.gitignore`. Live training
+output written by `rlbench train --output runs/...` is reproducible and is
+ignored. A redundant copy of the audit evidence is kept outside the repository
+at `experiments-data/rl-runs/AgentBenchRL-snakego-task10/`.

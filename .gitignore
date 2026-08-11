@@ -20,12 +20,21 @@ __pycache__/
 .ipynb_checkpoints/
 *.egg-info/
 
-# JavaScript dependencies/build outputs
+# Build outputs and packaging artifacts
 node_modules/
 dist/
 build/
 .next/
 .nuxt/
+
+# Training run outputs (produced by `rlbench train`; reproducible, not tracked).
+# NOTE: results/ and reports/ are intentionally NOT ignored -- they are the
+# committed, content-addressed audit evidence for the SnakeGo Task-10 study
+# (results/snakego/SHA256SUMS pins every file) and are required by the
+# reproducibility tests and the release extractor. Do not delete or gitignore
+# them. A redundant backup lives under
+# experiments-data/rl-runs/AgentBenchRL-snakego-task10/.
+runs/
 
 # Native build outputs and local binaries
 *.exe
