@@ -1,6 +1,6 @@
-# AgentBench RL Frame
+# AgentBenchRLFrame
 
-AgentBench RL Frame is an installable research framework for deterministic,
+AgentBenchRLFrame is an installable research framework for deterministic,
 two-player AgentBench games. It provides AlphaZero and Tianshou PPO backends,
 immutable experiment facts, side-balanced evaluation, population manifests,
 league utilities, telemetry, and reproducible reports. Frozen expected-state
@@ -66,11 +66,36 @@ class MyGame:
     def outcome(self, player: int) -> float | None: ...
 ```
 
-Register the class in `rlbench.registry.GAMES`. The framework owns training,
-checkpointing, evaluation, metrics, telemetry, and reporting. A plugin may
-also expose `clone`, `symmetries`, `encode_state_id`, `score`, or
+Ship the game as a plugin, not by editing framework source. Create a
+`games/<name>/` package and expose a single `PLUGIN` object from
+`games/<name>/plugin.py`:
+
+```python
+# games/<name>/plugin.py
+from rlbench.plugins import GamePlugin
+from .game import MyGame
+
+PLUGIN = GamePlugin(
+    name="<name>",
+    game=MyGame,
+    config_schema={"max_round": 512},
+    official_protocols={},  # optional: {"<protocol>": ProcessPolicyFactory}
+)
+```
+
+`rlbench.registry` discovers plugins by scanning the `games` namespace
+package at runtime, so `rlbench.registry.GAMES`, the CLI game choices, and the
+config schema are populated without any change to framework source. Adding a
+new game is therefore a new `games/<name>/` plugin plus its configuration.
+`games` is deliberately a top-level package (not `rlbench.games`) so games are
+plugins alongside the framework rather than part of it; SnakeGo under
+`src/games/snakego` is the reference implementation. The framework owns
+training, checkpointing, evaluation, metrics, telemetry, and reporting. A
+plugin may also expose `clone`, `symmetries`, `encode_state_id`, `score`, or
 `training_potential` for backend-specific acceleration, reward shaping, and
-diagnostics.
+diagnostics. A game that speaks a bespoke wire protocol to external process
+opponents declares it through `official_protocols`; the CLI resolves the
+handler by protocol name with no game-specific branches.
 
 An optional search or scripted action prior can be placed at PPO residual
 action zero without changing the game rules or trainer:
@@ -105,6 +130,25 @@ For deployment, pass the same mapper and ID to
 `run_official_agent(policy, action_mapper=mapper)`. The official adapter maps
 the selected residual index back to the canonical game action before sending
 it to the judge.
+
+## Configuration layout
+
+Configuration is composed from three layers under `configs/`:
+
+- `configs/algorithms/` — backend defaults (`alphazero.yaml`, `ppo.yaml`);
+- `configs/experiments/` — runnable experiment configs. SnakeGo files are
+  prefixed `snakego_`: strength (`snakego_alphazero_strength.yaml`), PPO
+  baselines and curriculum (`snakego_ppo_baseline.yaml`,
+  `snakego_ppo_human_curriculum.yaml`), a fast smoke config
+  (`snakego_smoke.yaml`), and the locked Task-10 study configs
+  (`snakego_task10_alphazero_locked.yaml`, `snakego_task10_ppo_locked.yaml`);
+- game configuration schema is declared by each game plugin
+  (`GamePlugin.config_schema`) rather than a standalone file, so it stays the
+  single source of truth for the CLI and config composition.
+
+Experiment configs stay under `configs/experiments/` and are indexed here;
+they are named by game so a new game's configs sit alongside without
+collision.
 
 ## Train and resume
 
