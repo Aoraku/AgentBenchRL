@@ -422,12 +422,13 @@ actions remain valid game losses.
 
 ### Committed audit evidence
 
-`results/` and `reports/` are not scratch output. They hold the committed,
-content-addressed audit evidence for the SnakeGo Task-10 study:
-`results/snakego/SHA256SUMS` pins every evidence file (moves, matches,
-evaluations, promotion facts, strength curves), and both directories are
-required by the reproducibility tests and the release extractor. They are
-therefore deliberately tracked and excluded from `.gitignore`. Live training
-output written by `rlbench train --output runs/...` is reproducible and is
-ignored. A redundant copy of the audit evidence is kept outside the repository
-at `experiments-data/rl-runs/AgentBenchRL-snakego-task10/`.
+`results/` and `reports/` are not scratch output. They hold committed,
+content-addressed audit evidence. `results/snakego/SHA256SUMS` pins the
+SnakeGo Task-10 evidence (moves, matches, evaluations, promotion facts, and
+strength curves). `results/connect4/SHA256SUMS` pins the interim four-seed
+LightZero AlphaZero Policy Elo snapshot described in
+`reports/connect4_lightzero.md`. Both directories are deliberately tracked and
+excluded from `.gitignore`; live training output written by
+`rlbench train --output runs/...` remains reproducible and ignored. A
+redundant copy of the SnakeGo audit evidence is kept outside the repository at
+`experiments-data/rl-runs/AgentBenchRL-snakego-task10/`.

@@ -1,0 +1,237 @@
+{
+  "checkpoint_assets": [
+    {
+      "checkpoint_sha256": "sha256:a6ed16cde914ab2615f3098b05c491ba04747bdc916a6b7ff9cbc6a71df4768d",
+      "policy_id": "seed0_iter000000",
+      "seed": 0,
+      "training_iteration": 0
+    },
+    {
+      "checkpoint_sha256": "sha256:86ad4b3e6ce74232ca767eac972ae62a739e74fde09aa0b24feb8f6b20792469",
+      "policy_id": "seed0_iter010000",
+      "seed": 0,
+      "training_iteration": 10000
+    },
+    {
+      "checkpoint_sha256": "sha256:ea626810e77208dded12682c1f00679a8446f787a39f0002655db46cea045b56",
+      "policy_id": "seed0_iter020000",
+      "seed": 0,
+      "training_iteration": 20000
+    },
+    {
+      "checkpoint_sha256": "sha256:d4886facaa5ff2177f9f037edd92a9ae5ec7e92da8b3808b9be468a93e42e664",
+      "policy_id": "seed0_iter030000",
+      "seed": 0,
+      "training_iteration": 30000
+    },
+    {
+      "checkpoint_sha256": "sha256:0a140a971e2f4dc18b5a0b7d324a489ff8b6b1bcf2d54c626c5cd69e8b5c0873",
+      "policy_id": "seed0_iter040000",
+      "seed": 0,
+      "training_iteration": 40000
+    },
+    {
+      "checkpoint_sha256": "sha256:1ee25bf6f4595a990d133a3dbfcb5c176dca03ed23d086a9823e32ef989c554b",
+      "policy_id": "seed0_iter050000",
+      "seed": 0,
+      "training_iteration": 50000
+    },
+    {
+      "checkpoint_sha256": "sha256:3a102e508d256fb88b71643af53fcdb46ea75a81087986e429580950fe8362d6",
+      "policy_id": "seed0_iter060000",
+      "seed": 0,
+      "training_iteration": 60000
+    },
+    {
+      "checkpoint_sha256": "sha256:6f54c3abfab246161ef44a0226f110d65ab11d1b7b1439ac867490dd5673d638",
+      "policy_id": "seed0_iter070000",
+      "seed": 0,
+      "training_iteration": 70000
+    },
+    {
+      "checkpoint_sha256": "sha256:38f0aeabb46ad14296017e3dae3b9c0b24c24fbe8ba726b24e68acd5b417fc92",
+      "policy_id": "seed0_iter080000",
+      "seed": 0,
+      "training_iteration": 80000
+    },
+    {
+      "checkpoint_sha256": "sha256:c6469d625e2a9d6d7532dda7d907129ad0f6d346068044d31a798f0b7d73b82e",
+      "policy_id": "seed1_iter000000",
+      "seed": 1,
+      "training_iteration": 0
+    },
+    {
+      "checkpoint_sha256": "sha256:c30dbc672b878779052321c98e8b3d6cb9058a86be397b3c65d7da9d364bef89",
+      "policy_id": "seed1_iter010000",
+      "seed": 1,
+      "training_iteration": 10000
+    },
+    {
+      "checkpoint_sha256": "sha256:c6d1ba3867274c6032ae43005ccf2e8df500570c12fe39018ac43b4d3e2be4fd",
+      "policy_id": "seed1_iter020000",
+      "seed": 1,
+      "training_iteration": 20000
+    },
+    {
+      "checkpoint_sha256": "sha256:c0ec806fdb4a1efad27cfe0a2011c41afe42a653ae0a7a153753a64386d9b279",
+      "policy_id": "seed1_iter030000",
+      "seed": 1,
+      "training_iteration": 30000
+    },
+    {
+      "checkpoint_sha256": "sha256:9a4f1a94240964c245dd4405eefc7d2147136633d8662fb408d35783ab745e32",
+      "policy_id": "seed1_iter040000",
+      "seed": 1,
+      "training_iteration": 40000
+    },
+    {
+      "checkpoint_sha256": "sha256:dc154f2e7137e162213aeece6420fbad3c7554e1ae3c0433d387f7a4b67e2caa",
+      "policy_id": "seed1_iter050000",
+      "seed": 1,
+      "training_iteration": 50000
+    },
+    {
+      "checkpoint_sha256": "sha256:491742cff612821430ed96e72e769ff1c4960ed742211be956ba11cce3c3c710",
+      "policy_id": "seed1_iter060000",
+      "seed": 1,
+      "training_iteration": 60000
+    },
+    {
+      "checkpoint_sha256": "sha256:f860fb5e7cf2b49e47a7f64259647622bfaf228f9fd005904d45d3ae886c7649",
+      "policy_id": "seed1_iter070000",
+      "seed": 1,
+      "training_iteration": 70000
+    },
+    {
+      "checkpoint_sha256": "sha256:fff3428b67f6c3b4be411af55644d937483d0bf20fc3e76e42fcb90352c89651",
+      "policy_id": "seed1_iter080000",
+      "seed": 1,
+      "training_iteration": 80000
+    },
+    {
+      "checkpoint_sha256": "sha256:ce8e44a387ed13992992795eeea27135ea09e9d443d9e3cc09f40d39498344cc",
+      "policy_id": "seed2_iter000000",
+      "seed": 2,
+      "training_iteration": 0
+    },
+    {
+      "checkpoint_sha256": "sha256:d145632f9e4f0757d24c0aa15e5d5d721f96532681b4a497f96dc54f6ca400b2",
+      "policy_id": "seed2_iter010000",
+      "seed": 2,
+      "training_iteration": 10000
+    },
+    {
+      "checkpoint_sha256": "sha256:e9fdc3b013f05ad4125ef867c9de966b578ed89c6d033f39a5786188351d9f54",
+      "policy_id": "seed2_iter020000",
+      "seed": 2,
+      "training_iteration": 20000
+    },
+    {
+      "checkpoint_sha256": "sha256:782ffa61f66c161fe9c43adaa63af740329f59ce3f4c068ca59739551aa1e0a8",
+      "policy_id": "seed2_iter030000",
+      "seed": 2,
+      "training_iteration": 30000
+    },
+    {
+      "checkpoint_sha256": "sha256:13532f18e78451be707588e2a292d3795f76a20c849054ce358678e5350f8661",
+      "policy_id": "seed2_iter040000",
+      "seed": 2,
+      "training_iteration": 40000
+    },
+    {
+      "checkpoint_sha256": "sha256:8338f257a1825db37b8a75e7113d3361803b8a911ae78527c0ded72ec8ca119d",
+      "policy_id": "seed2_iter050000",
+      "seed": 2,
+      "training_iteration": 50000
+    },
+    {
+      "checkpoint_sha256": "sha256:e3262f056bd4121bd26d1366f2d378f16fb560c9e2c97e93a18d810c79b2781f",
+      "policy_id": "seed2_iter060000",
+      "seed": 2,
+      "training_iteration": 60000
+    },
+    {
+      "checkpoint_sha256": "sha256:74001e726da87e5e798d67ee43df8e846186dd0d3e9fb03080742b69415cbe2c",
+      "policy_id": "seed2_iter070000",
+      "seed": 2,
+      "training_iteration": 70000
+    },
+    {
+      "checkpoint_sha256": "sha256:b0665933a9417104029f616455b132561db0b1486e46e37cce9c53a13ad259af",
+      "policy_id": "seed2_iter080000",
+      "seed": 2,
+      "training_iteration": 80000
+    },
+    {
+      "checkpoint_sha256": "sha256:fdc79ab6e73a987ebbc4425fb2699b7a24403b946eee0673fb0fa9687b0f6d56",
+      "policy_id": "seed3_iter000000",
+      "seed": 3,
+      "training_iteration": 0
+    },
+    {
+      "checkpoint_sha256": "sha256:e3e0990fa7fe38e8aa446e9455b38e4cdc047077897ac7870885015384e7dd07",
+      "policy_id": "seed3_iter010000",
+      "seed": 3,
+      "training_iteration": 10000
+    },
+    {
+      "checkpoint_sha256": "sha256:937a9afd39c6d28124c6cb0e59a1ee8ade1e1cad1c13fedf4399a278e1749dc7",
+      "policy_id": "seed3_iter020000",
+      "seed": 3,
+      "training_iteration": 20000
+    },
+    {
+      "checkpoint_sha256": "sha256:8ff49c30824eeea37b7c80634fc73551dfc8b9a5849aed6d7cbb9b375217659d",
+      "policy_id": "seed3_iter030000",
+      "seed": 3,
+      "training_iteration": 30000
+    },
+    {
+      "checkpoint_sha256": "sha256:6f91e9c0de5251e42698c9dc324742d2274294edf6ca5ba7672406fed7a39f11",
+      "policy_id": "seed3_iter040000",
+      "seed": 3,
+      "training_iteration": 40000
+    },
+    {
+      "checkpoint_sha256": "sha256:3d074f8904e9ef0d3566e4844b9f9a71b945ad1dd9e540ea3caaa447dc9c809d",
+      "policy_id": "seed3_iter050000",
+      "seed": 3,
+      "training_iteration": 50000
+    },
+    {
+      "checkpoint_sha256": "sha256:0b936a876b571846778f8f93e07cbef8b7f004799474ee773b1b806c23f8b54c",
+      "policy_id": "seed3_iter060000",
+      "seed": 3,
+      "training_iteration": 60000
+    },
+    {
+      "checkpoint_sha256": "sha256:f85d596718313c5838de16e43612ec894d13ec920b177fd6f795535209c899be",
+      "policy_id": "seed3_iter070000",
+      "seed": 3,
+      "training_iteration": 70000
+    },
+    {
+      "checkpoint_sha256": "sha256:9ac296fe563423ddfe0cc1b1c6e4f81ac6b7dd167866e47e057e3dd97d4ca93e",
+      "policy_id": "seed3_iter080000",
+      "seed": 3,
+      "training_iteration": 80000
+    }
+  ],
+  "common_horizon_iteration": 80000,
+  "created_at": "2026-08-24T22:27:59+08:00",
+  "generator": "scripts/build_connect4_lightzero_results.py",
+  "known_limitations": [
+    "This is an interim snapshot; all four training processes were still running.",
+    "Iteration-0 Elo 1000 is the SOP initialization, not a RuleBot measurement; its uncertainty is null.",
+    "Official LightZero evaluation supplies only five games per checkpoint per seed.",
+    "The learner occupies the first-player seat only in these evaluations.",
+    "The RuleBot identity is fixed but its fallback action choice is stochastic.",
+    "Pooled Elo combines independent same-iteration policies across four seeds.",
+    "No checkpoint binary, raw log, TensorBoard event, or machine path is published."
+  ],
+  "lightzero_commit": "9f717c80c86d5c69b39a56d8ade18e684ce6311a",
+  "official_config_sha256": "090c3fd71aabc0e0e1671775e4ecabd888bf841ccccc663e214d291d51cf4e65",
+  "schema_version": 1,
+  "snapshot_id": "connect4-lightzero-20260824-common-iter080000",
+  "source_host": "xulab"
+}
