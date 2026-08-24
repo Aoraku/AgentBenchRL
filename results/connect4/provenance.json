@@ -222,6 +222,7 @@
   "generator": "scripts/build_connect4_lightzero_results.py",
   "known_limitations": [
     "This is an interim snapshot; all four training processes were still running.",
+    "Iteration-0 Elo 1000 is the SOP initialization, not a RuleBot measurement; its uncertainty is null.",
     "Official LightZero evaluation supplies only five games per checkpoint per seed.",
     "The learner occupies the first-player seat only in these evaluations.",
     "The RuleBot identity is fixed but its fallback action choice is stochastic.",

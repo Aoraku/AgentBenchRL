@@ -1,13 +1,19 @@
 {
   "aggregate_semantics": {
     "evaluation_games": "sum of the four five-game RuleBot evaluations",
-    "games_seen": "sum of completed training self-play games across all four seeds",
+    "games_seen": "sum of incremental completed self-play games between adjacent policies across all four seeds",
     "policy": "same-iteration policies pooled across seeds 0, 1, 2, 3"
   },
   "elo_protocol": {
     "anchor_elo": 1000.0,
     "anchor_policy": "lightzero_connect4_rulebot_v1",
     "fit": "batch Bradley-Terry, draws score 0.5, L2=0.01",
+    "initial_policy_rating": {
+      "elo": 1000.0,
+      "origin": "initialized_by_sop",
+      "rulebot_evaluated": false,
+      "training_iteration": 0
+    },
     "limitations": [
       "five games per checkpoint per seed",
       "learner is first player only",
@@ -18,11 +24,12 @@
     "opponent_identity": "static",
     "uncertainty": "inverse observed Hessian, one standard deviation"
   },
-  "elo_system": "agentbenchrl-anchored-bradley-terry-l2-0.01-v1",
+  "elo_system": "agentbenchrl-sop-initialized-1000-anchored-bradley-terry-l2-0.01-v2",
   "games_seen_accounting": {
     "absolute_self_play_games_at_endpoint": 51264,
-    "absolute_self_play_games_at_first_policy": 6464,
-    "rounds": "incremental completed self-play games between measured pooled policies"
+    "cumulative_games_seen_at_endpoint": 51200,
+    "self_play_games_before_initial_policy": 64,
+    "trajectory_origin": "iteration 0 policy checkpoint"
   },
   "plot_contract": {
     "information_gain_and_win_rate": "machine-readable metadata only",
@@ -30,6 +37,23 @@
     "y_axis": "Elo only"
   },
   "policy_sources": {
+    "pooled_iter000000": {
+      "env_steps_sum": 1356,
+      "member_checkpoint_sha256": [
+        "sha256:a6ed16cde914ab2615f3098b05c491ba04747bdc916a6b7ff9cbc6a71df4768d",
+        "sha256:c6469d625e2a9d6d7532dda7d907129ad0f6d346068044d31a798f0b7d73b82e",
+        "sha256:ce8e44a387ed13992992795eeea27135ea09e9d443d9e3cc09f40d39498344cc",
+        "sha256:fdc79ab6e73a987ebbc4425fb2699b7a24403b946eee0673fb0fa9687b0f6d56"
+      ],
+      "member_policy_ids": [
+        "seed0_iter000000",
+        "seed1_iter000000",
+        "seed2_iter000000",
+        "seed3_iter000000"
+      ],
+      "self_play_games_sum": 64,
+      "training_iteration": 0
+    },
     "pooled_iter010000": {
       "env_steps_sum": 169768,
       "member_checkpoint_sha256": [
@@ -170,6 +194,56 @@
   "rounds": [
     {
       "budget": {
+        "policy_cur_env_steps_sum": 1356,
+        "policy_cur_self_play_games_sum": 64,
+        "policy_nxt_env_steps_sum": 169768,
+        "policy_nxt_self_play_games_sum": 6464,
+        "training_iteration": 10000
+      },
+      "elo": {
+        "pooled_iter000000": 1000.0,
+        "pooled_iter010000": 892.6976564331328
+      },
+      "elo_uncertainty": {
+        "pooled_iter000000": null,
+        "pooled_iter010000": 81.33430274974577
+      },
+      "games_seen": 6400,
+      "information_gain": {
+        "direction": "D_KL(policy_nxt || policy_cur)",
+        "mean_across_seeds": 0.9373732209205627,
+        "per_seed_mean": {
+          "seed0": 0.7994284629821777,
+          "seed1": 1.0331876277923584,
+          "seed2": 0.9992437362670898,
+          "seed3": 0.917633056640625
+        },
+        "probe_count_per_seed": 512,
+        "std_across_seeds": 0.09003720281350011,
+        "unit": "nats",
+        "version": "masked-policy-kl-v1-four-seed-aggregate"
+      },
+      "policy_cur": "pooled_iter000000",
+      "policy_nxt": "pooled_iter010000",
+      "round": 1,
+      "win_rate": {
+        "agent_seat": "first_player_only",
+        "draws": 2,
+        "games": 20,
+        "losses": 12,
+        "mcts_simulations": 50,
+        "opponent": "LightZero Connect4RuleBot",
+        "score_rate": 0.35,
+        "version": "lightzero-online-rulebot-v1",
+        "wilson_95": [
+          0.18118954786794464,
+          0.5671494897805354
+        ],
+        "wins": 6
+      }
+    },
+    {
+      "budget": {
         "policy_cur_env_steps_sum": 169768,
         "policy_cur_self_play_games_sum": 6464,
         "policy_nxt_env_steps_sum": 372639,
@@ -201,7 +275,7 @@
       },
       "policy_cur": "pooled_iter010000",
       "policy_nxt": "pooled_iter020000",
-      "round": 1,
+      "round": 2,
       "win_rate": {
         "agent_seat": "first_player_only",
         "draws": 3,
@@ -251,7 +325,7 @@
       },
       "policy_cur": "pooled_iter020000",
       "policy_nxt": "pooled_iter030000",
-      "round": 2,
+      "round": 3,
       "win_rate": {
         "agent_seat": "first_player_only",
         "draws": 7,
@@ -301,7 +375,7 @@
       },
       "policy_cur": "pooled_iter030000",
       "policy_nxt": "pooled_iter040000",
-      "round": 3,
+      "round": 4,
       "win_rate": {
         "agent_seat": "first_player_only",
         "draws": 1,
@@ -351,7 +425,7 @@
       },
       "policy_cur": "pooled_iter040000",
       "policy_nxt": "pooled_iter050000",
-      "round": 4,
+      "round": 5,
       "win_rate": {
         "agent_seat": "first_player_only",
         "draws": 1,
@@ -401,7 +475,7 @@
       },
       "policy_cur": "pooled_iter050000",
       "policy_nxt": "pooled_iter060000",
-      "round": 5,
+      "round": 6,
       "win_rate": {
         "agent_seat": "first_player_only",
         "draws": 0,
@@ -451,7 +525,7 @@
       },
       "policy_cur": "pooled_iter060000",
       "policy_nxt": "pooled_iter070000",
-      "round": 6,
+      "round": 7,
       "win_rate": {
         "agent_seat": "first_player_only",
         "draws": 5,
@@ -501,7 +575,7 @@
       },
       "policy_cur": "pooled_iter070000",
       "policy_nxt": "pooled_iter080000",
-      "round": 7,
+      "round": 8,
       "win_rate": {
         "agent_seat": "first_player_only",
         "draws": 1,

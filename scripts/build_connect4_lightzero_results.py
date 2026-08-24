@@ -27,7 +27,8 @@ from rlbench.metrics import MatchOutcome, fit_anchored_elo, win_rate_summary  # 
 
 ANCHOR_ID = "lightzero_connect4_rulebot_v1"
 ANCHOR_ELO = 1000.0
-ELO_SYSTEM = "agentbenchrl-anchored-bradley-terry-l2-0.01-v1"
+INITIAL_POLICY_ELO = 1000.0
+ELO_SYSTEM = "agentbenchrl-sop-initialized-1000-anchored-bradley-terry-l2-0.01-v2"
 FIRST_MEASURED_ITERATION = 10_000
 
 
@@ -88,10 +89,20 @@ def _measurements_batch(
 def _validate_source(source: dict[str, Any]) -> None:
     if source.get("schema_version") != 1:
         raise ValueError("source snapshot schema_version must be 1")
+    horizon = source.get("common_horizon_iteration")
+    if (
+        isinstance(horizon, bool)
+        or not isinstance(horizon, int)
+        or horizon < FIRST_MEASURED_ITERATION
+        or horizon % 10_000 != 0
+    ):
+        raise ValueError(
+            "common_horizon_iteration must be at least 10000 and a multiple of 10000"
+        )
     seeds = source.get("seeds")
     if not isinstance(seeds, list) or [seed.get("seed") for seed in seeds] != [0, 1, 2, 3]:
         raise ValueError("source snapshot must contain ordered seeds 0, 1, 2, 3")
-    expected_iterations = list(range(0, int(source["common_horizon_iteration"]) + 1, 10_000))
+    expected_iterations = list(range(0, horizon + 1, 10_000))
     for seed in seeds:
         checkpoints = seed.get("checkpoints")
         if not isinstance(checkpoints, list):
@@ -205,6 +216,12 @@ def _sop_header(source: dict[str, Any], *, run_id: str) -> dict[str, Any]:
         "elo_protocol": {
             "anchor_policy": ANCHOR_ID,
             "anchor_elo": ANCHOR_ELO,
+            "initial_policy_rating": {
+                "training_iteration": 0,
+                "elo": INITIAL_POLICY_ELO,
+                "origin": "initialized_by_sop",
+                "rulebot_evaluated": False,
+            },
             "fit": "batch Bradley-Terry, draws score 0.5, L2=0.01",
             "uncertainty": "inverse observed Hessian, one standard deviation",
             "opponent_identity": "static",
@@ -231,16 +248,15 @@ def _seed_sop(
     measurements: dict[int, dict[str, Any]],
 ) -> dict[str, Any]:
     payload = _sop_header(source, run_id=f"connect4-lightzero-alphazero-seed{seed}-iter080000")
-    iterations = sorted(measurements)
+    iterations = sorted(checkpoints)
+    initial_games = int(checkpoints[iterations[0]]["self_play_games"])
+    endpoint_games = int(checkpoints[iterations[-1]]["self_play_games"])
     payload["seed"] = seed
     payload["games_seen_accounting"] = {
-        "rounds": "incremental completed self-play games between measured policies",
-        "absolute_self_play_games_at_first_policy": int(
-            checkpoints[iterations[0]]["self_play_games"]
-        ),
-        "absolute_self_play_games_at_endpoint": int(
-            checkpoints[iterations[-1]]["self_play_games"]
-        ),
+        "trajectory_origin": "iteration 0 policy checkpoint",
+        "self_play_games_before_initial_policy": initial_games,
+        "cumulative_games_seen_at_endpoint": endpoint_games - initial_games,
+        "absolute_self_play_games_at_endpoint": endpoint_games,
     }
     payload["policy_sources"] = {
         checkpoints[iteration]["policy_id"]: {
@@ -259,7 +275,7 @@ def _seed_sop(
         nxt = checkpoints[next_iteration]
         current_id = str(current["policy_id"])
         next_id = str(nxt["policy_id"])
-        current_measurement = measurements[current_iteration]
+        current_measurement = measurements.get(current_iteration)
         next_measurement = measurements[next_iteration]
         transition = nxt["transition_from_previous"]
         rounds.append(
@@ -269,11 +285,15 @@ def _seed_sop(
                 "policy_nxt": next_id,
                 "games_seen": int(nxt["self_play_games"]) - int(current["self_play_games"]),
                 "elo": {
-                    current_id: current_measurement["elo"],
+                    current_id: INITIAL_POLICY_ELO
+                    if current_measurement is None
+                    else current_measurement["elo"],
                     next_id: next_measurement["elo"],
                 },
                 "elo_uncertainty": {
-                    current_id: current_measurement["elo_uncertainty"],
+                    current_id: None
+                    if current_measurement is None
+                    else current_measurement["elo_uncertainty"],
                     next_id: next_measurement["elo_uncertainty"],
                 },
                 "win_rate": _win_rate_metadata(next_measurement),
@@ -320,18 +340,19 @@ def _pooled_sop(
     payload = _sop_header(source, run_id="connect4-lightzero-alphazero-four-seed-pooled-iter080000")
     payload["aggregate_semantics"] = {
         "policy": "same-iteration policies pooled across seeds 0, 1, 2, 3",
-        "games_seen": "sum of completed training self-play games across all four seeds",
+        "games_seen": "sum of incremental completed self-play games between adjacent policies across all four seeds",
         "evaluation_games": "sum of the four five-game RuleBot evaluations",
     }
-    iterations = sorted(measurements)
+    iterations = sorted(indexed[0])
+    initial_games = sum(indexed[seed][iterations[0]]["self_play_games"] for seed in range(4))
+    endpoint_games = sum(
+        indexed[seed][iterations[-1]]["self_play_games"] for seed in range(4)
+    )
     payload["games_seen_accounting"] = {
-        "rounds": "incremental completed self-play games between measured pooled policies",
-        "absolute_self_play_games_at_first_policy": int(
-            sum(indexed[seed][iterations[0]]["self_play_games"] for seed in range(4))
-        ),
-        "absolute_self_play_games_at_endpoint": int(
-            sum(indexed[seed][iterations[-1]]["self_play_games"] for seed in range(4))
-        ),
+        "trajectory_origin": "iteration 0 policy checkpoint",
+        "self_play_games_before_initial_policy": int(initial_games),
+        "cumulative_games_seen_at_endpoint": int(endpoint_games - initial_games),
+        "absolute_self_play_games_at_endpoint": int(endpoint_games),
     }
     payload["policy_sources"] = {
         f"pooled_iter{iteration:06d}": {
@@ -353,7 +374,7 @@ def _pooled_sop(
     ):
         current_id = f"pooled_iter{current_iteration:06d}"
         next_id = f"pooled_iter{next_iteration:06d}"
-        current_measurement = measurements[current_iteration]
+        current_measurement = measurements.get(current_iteration)
         next_measurement = measurements[next_iteration]
         current_games = sum(indexed[seed][current_iteration]["self_play_games"] for seed in range(4))
         next_games = sum(indexed[seed][next_iteration]["self_play_games"] for seed in range(4))
@@ -364,11 +385,15 @@ def _pooled_sop(
                 "policy_nxt": next_id,
                 "games_seen": int(next_games - current_games),
                 "elo": {
-                    current_id: current_measurement["elo"],
+                    current_id: INITIAL_POLICY_ELO
+                    if current_measurement is None
+                    else current_measurement["elo"],
                     next_id: next_measurement["elo"],
                 },
                 "elo_uncertainty": {
-                    current_id: current_measurement["elo_uncertainty"],
+                    current_id: None
+                    if current_measurement is None
+                    else current_measurement["elo_uncertainty"],
                     next_id: next_measurement["elo_uncertainty"],
                 },
                 "win_rate": _win_rate_metadata(next_measurement),
@@ -435,34 +460,46 @@ def _curve_rows(
 ) -> list[dict[str, Any]]:
     rows = []
     for seed in range(4):
-        iterations = sorted(seed_measurements[seed])
+        iterations = sorted(indexed[seed])
+        initial_games = int(indexed[seed][iterations[0]]["self_play_games"])
         for iteration in iterations:
             checkpoint = indexed[seed][iteration]
-            measured = seed_measurements[seed][iteration]
+            measured = seed_measurements[seed].get(iteration)
             rows.append(
                 {
                     "trajectory": f"seed{seed}",
                     "seed": seed,
                     "training_iteration": iteration,
-                    "cumulative_games_seen": int(checkpoint["self_play_games"]),
-                    "elo": measured["elo"],
-                    "elo_uncertainty": measured["elo_uncertainty"],
+                    "cumulative_games_seen": int(checkpoint["self_play_games"]) - initial_games,
+                    "elo": INITIAL_POLICY_ELO if measured is None else measured["elo"],
+                    "elo_uncertainty": None
+                    if measured is None
+                    else measured["elo_uncertainty"],
+                    "rating_origin": "initialized_by_sop"
+                    if measured is None
+                    else "rulebot_evaluation",
                     "env_steps": checkpoint["env_steps"],
                     "self_play_games": checkpoint["self_play_games"],
                 }
             )
-    iterations = sorted(pooled_measurements)
+    iterations = sorted(indexed[0])
+    initial_games = sum(indexed[seed][iterations[0]]["self_play_games"] for seed in range(4))
     for iteration in iterations:
-        measured = pooled_measurements[iteration]
+        measured = pooled_measurements.get(iteration)
         total_games = sum(indexed[seed][iteration]["self_play_games"] for seed in range(4))
         rows.append(
             {
                 "trajectory": "pooled",
                 "seed": "all",
                 "training_iteration": iteration,
-                "cumulative_games_seen": int(total_games),
-                "elo": measured["elo"],
-                "elo_uncertainty": measured["elo_uncertainty"],
+                "cumulative_games_seen": int(total_games - initial_games),
+                "elo": INITIAL_POLICY_ELO if measured is None else measured["elo"],
+                "elo_uncertainty": None
+                if measured is None
+                else measured["elo_uncertainty"],
+                "rating_origin": "initialized_by_sop"
+                if measured is None
+                else "rulebot_evaluation",
                 "env_steps": sum(indexed[seed][iteration]["env_steps"] for seed in range(4)),
                 "self_play_games": total_games,
             }
@@ -484,7 +521,10 @@ def make_policy_elo_figure(
     pooled = [row for row in curve_rows if row["trajectory"] == "pooled"]
     x = [float(row["cumulative_games_seen"]) for row in pooled]
     y = [float(row["elo"]) for row in pooled]
-    uncertainty = [float(row["elo_uncertainty"]) for row in pooled]
+    uncertainty = [
+        math.nan if row["elo_uncertainty"] in (None, "") else float(row["elo_uncertainty"])
+        for row in pooled
+    ]
     lower = [rating - error for rating, error in zip(y, uncertainty, strict=True)]
     upper = [rating + error for rating, error in zip(y, uncertainty, strict=True)]
 
@@ -510,7 +550,7 @@ def make_policy_elo_figure(
         label="Four-seed pooled Elo",
     )
     axis.axhline(ANCHOR_ELO, color="#767676", linewidth=1.2, linestyle="--", label="RuleBot anchor")
-    axis.set_xlabel("Cumulative self-play games seen (four-seed total)")
+    axis.set_xlabel("Cumulative self-play games since initial policy (four-seed total)")
     axis.set_ylabel("Elo")
     title = figure.suptitle(
         "Connect4 AlphaZero policy Elo",
@@ -524,7 +564,7 @@ def make_policy_elo_figure(
     subtitle = figure.text(
         0.10,
         0.925,
-        "Interim 0–80k checkpoint snapshot; band = one-standard-deviation fit uncertainty",
+        "Interim 0–80k snapshot; initial policy = Elo 1000; band = one-standard-deviation fit uncertainty",
         color="#4D4D4D",
         fontsize=10.5,
         ha="left",
@@ -555,16 +595,26 @@ def _summary(
     pooled_measurements: dict[int, dict[str, Any]],
 ) -> dict[str, Any]:
     horizon = int(source["common_horizon_iteration"])
-    pooled_history = []
+    initial_games = sum(indexed[seed][0]["self_play_games"] for seed in range(4))
+    pooled_history = [
+        {
+            "training_iteration": 0,
+            "cumulative_games_seen": 0,
+            "rating": INITIAL_POLICY_ELO,
+            "uncertainty": None,
+            "rating_origin": "initialized_by_sop",
+        }
+    ]
     for iteration in sorted(pooled_measurements):
         total_games = sum(indexed[seed][iteration]["self_play_games"] for seed in range(4))
         measured = pooled_measurements[iteration]
         pooled_history.append(
             {
                 "training_iteration": iteration,
-                "cumulative_games_seen": int(total_games),
+                "cumulative_games_seen": int(total_games - initial_games),
                 "rating": measured["elo"],
                 "uncertainty": measured["elo_uncertainty"],
+                "rating_origin": "rulebot_evaluation",
             }
         )
     final = pooled_measurements[horizon]
@@ -639,6 +689,7 @@ def _provenance(source: dict[str, Any]) -> dict[str, Any]:
         "generator": "scripts/build_connect4_lightzero_results.py",
         "known_limitations": [
             "This is an interim snapshot; all four training processes were still running.",
+            "Iteration-0 Elo 1000 is the SOP initialization, not a RuleBot measurement; its uncertainty is null.",
             "Official LightZero evaluation supplies only five games per checkpoint per seed.",
             "The learner occupies the first-player seat only in these evaluations.",
             "The RuleBot identity is fixed but its fallback action choice is stochastic.",

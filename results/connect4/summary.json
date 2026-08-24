@@ -5,50 +5,65 @@
   "created": "2026-08-24T22:27:59+08:00",
   "elo_history": [
     {
-      "cumulative_games_seen": 6464,
+      "cumulative_games_seen": 0,
+      "rating": 1000.0,
+      "rating_origin": "initialized_by_sop",
+      "training_iteration": 0,
+      "uncertainty": null
+    },
+    {
+      "cumulative_games_seen": 6400,
       "rating": 892.6976564331328,
+      "rating_origin": "rulebot_evaluation",
       "training_iteration": 10000,
       "uncertainty": 81.33430274974577
     },
     {
-      "cumulative_games_seen": 12864,
+      "cumulative_games_seen": 12800,
       "rating": 1336.505984374664,
+      "rating_origin": "rulebot_evaluation",
       "training_iteration": 20000,
       "uncertainty": 116.80214583574762
     },
     {
-      "cumulative_games_seen": 19264,
+      "cumulative_games_seen": 19200,
       "rating": 1268.4383153310866,
+      "rating_origin": "rulebot_evaluation",
       "training_iteration": 30000,
       "uncertainty": 101.8783809689379
     },
     {
-      "cumulative_games_seen": 25664,
+      "cumulative_games_seen": 25600,
       "rating": 1088.550617675086,
+      "rating_origin": "rulebot_evaluation",
       "training_iteration": 40000,
       "uncertainty": 80.1405037934841
     },
     {
-      "cumulative_games_seen": 32064,
+      "cumulative_games_seen": 32000,
       "rating": 1167.9810854419661,
+      "rating_origin": "rulebot_evaluation",
       "training_iteration": 50000,
       "uncertainty": 86.83885280608176
     },
     {
-      "cumulative_games_seen": 38464,
+      "cumulative_games_seen": 38400,
       "rating": 1300.1567617599167,
+      "rating_origin": "rulebot_evaluation",
       "training_iteration": 60000,
       "uncertainty": 108.31835844135863
     },
     {
-      "cumulative_games_seen": 44864,
+      "cumulative_games_seen": 44800,
       "rating": 1268.4383153310866,
+      "rating_origin": "rulebot_evaluation",
       "training_iteration": 70000,
       "uncertainty": 101.8783809689379
     },
     {
-      "cumulative_games_seen": 51264,
+      "cumulative_games_seen": 51200,
       "rating": 1624.0524517282888,
+      "rating_origin": "rulebot_evaluation",
       "training_iteration": 80000,
       "uncertainty": 238.2687418637443
     }
@@ -56,7 +71,7 @@
   "evaluation": {
     "anchor_elo": 1000.0,
     "anchor_id": "lightzero_connect4_rulebot_v1",
-    "elo_system": "agentbenchrl-anchored-bradley-terry-l2-0.01-v1",
+    "elo_system": "agentbenchrl-sop-initialized-1000-anchored-bradley-terry-l2-0.01-v2",
     "games_per_checkpoint_per_seed": 5,
     "learner_seat": "first_player_only",
     "opponent": "LightZero Connect4RuleBot",

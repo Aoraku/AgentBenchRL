@@ -15,7 +15,8 @@
 - Use only completed checkpoints present for all four seeds; never extrapolate unfinished training.
 - Preserve the official LightZero configuration: 50 MCTS simulations, five RuleBot evaluator games, learner first-player only.
 - Treat the RuleBot identity as static but its fallback action selection as stochastic.
-- Plot cumulative completed self-play games on x and Elo only on y, as required by the supplied SOP.
+- Follow the supplied SOP literally: initialize the iteration-0 `policy_cur` at Elo 1000 and cumulative `games_seen = 0`, include the 0→10k transition, and plot only Elo on y.
+- Keep SOP trajectory increments separate from absolute training counters: the former exclude games completed before the iteration-0 policy boundary.
 - Store missing or unavailable measurements as JSON `null`, never numeric zero.
 - Do not commit model checkpoints, TensorBoard events, raw logs, machine paths, or archives.
 - State prominently that this is an interim, first-player-only, low-game-count snapshot and not a final strength claim.
@@ -68,7 +69,7 @@ Record the LightZero commit, official-config SHA-256, selected horizon, checkpoi
 
 - [ ] **Step 1: Write failing schema and determinism tests.**
 
-Tests must assert round numbering and policy-chain continuity, non-negative incremental `games_seen`, exact cumulative-game endpoints, fixed RuleBot anchor metadata, Elo/uncertainty finiteness, no machine paths, and byte-identical JSON/CSV on repeated builds.
+Tests must assert round numbering and policy-chain continuity, the initialized iteration-0 Elo of 1000, the 0→10k first transition, non-negative incremental `games_seen`, exact cumulative-game endpoints, fixed RuleBot anchor metadata, nullable uncertainty only for the unmeasured initialized policy, no machine paths, and byte-identical JSON/CSV on repeated builds.
 
 - [ ] **Step 2: Run the focused tests and verify failure.**
 
@@ -99,7 +100,7 @@ Expected: focused tests PASS and repeated generation yields no Git diff.
 
 - [ ] **Step 1: Render the figure with the scientific-figure house style.**
 
-Show the pooled four-seed Elo as the only plotted line with uncertainty, cumulative self-play games summed across the four seeds on x, and Elo only on y. Keep individual seed trajectories in JSON/CSV rather than overlaying incompatible per-seed game budgets. Export a print-readable PNG with no win-rate or IG secondary axis.
+Show the pooled four-seed Elo as the only plotted line, beginning at `(games_seen=0, Elo=1000)`, with fit uncertainty only where measured. Sum post-initial-policy self-play increments across the four seeds on x and show Elo only on y. Keep individual seed trajectories in JSON/CSV rather than overlaying incompatible per-seed game budgets. Export a print-readable PNG with no win-rate or IG secondary axis.
 
 - [ ] **Step 2: Write the report.**
 
