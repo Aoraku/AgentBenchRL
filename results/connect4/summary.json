@@ -1,0 +1,114 @@
+{
+  "agent": "lightzero-alphazero",
+  "best_elo": 1624.0524517282888,
+  "common_horizon_iteration": 80000,
+  "created": "2026-08-24T22:27:59+08:00",
+  "elo_history": [
+    {
+      "cumulative_games_seen": 6464,
+      "rating": 892.6976564331328,
+      "training_iteration": 10000,
+      "uncertainty": 81.33430274974577
+    },
+    {
+      "cumulative_games_seen": 12864,
+      "rating": 1336.505984374664,
+      "training_iteration": 20000,
+      "uncertainty": 116.80214583574762
+    },
+    {
+      "cumulative_games_seen": 19264,
+      "rating": 1268.4383153310866,
+      "training_iteration": 30000,
+      "uncertainty": 101.8783809689379
+    },
+    {
+      "cumulative_games_seen": 25664,
+      "rating": 1088.550617675086,
+      "training_iteration": 40000,
+      "uncertainty": 80.1405037934841
+    },
+    {
+      "cumulative_games_seen": 32064,
+      "rating": 1167.9810854419661,
+      "training_iteration": 50000,
+      "uncertainty": 86.83885280608176
+    },
+    {
+      "cumulative_games_seen": 38464,
+      "rating": 1300.1567617599167,
+      "training_iteration": 60000,
+      "uncertainty": 108.31835844135863
+    },
+    {
+      "cumulative_games_seen": 44864,
+      "rating": 1268.4383153310866,
+      "training_iteration": 70000,
+      "uncertainty": 101.8783809689379
+    },
+    {
+      "cumulative_games_seen": 51264,
+      "rating": 1624.0524517282888,
+      "training_iteration": 80000,
+      "uncertainty": 238.2687418637443
+    }
+  ],
+  "evaluation": {
+    "anchor_elo": 1000.0,
+    "anchor_id": "lightzero_connect4_rulebot_v1",
+    "elo_system": "agentbenchrl-anchored-bradley-terry-l2-0.01-v1",
+    "games_per_checkpoint_per_seed": 5,
+    "learner_seat": "first_player_only",
+    "opponent": "LightZero Connect4RuleBot",
+    "pooled_games_per_checkpoint": 20,
+    "rulebot_action_selection": "stochastic_fallback",
+    "rulebot_identity": "static"
+  },
+  "final_elo": 1624.0524517282888,
+  "final_elo_uncertainty": 238.2687418637443,
+  "final_score_rate": 0.975,
+  "game": "connect4",
+  "information_gain": {
+    "direction": "D_KL(policy_nxt || policy_cur)",
+    "mean_nats": 0.7299079326912761,
+    "probe_count": 512,
+    "probe_seed": 20260823,
+    "std_nats": 0.22348255063823289,
+    "transition_measurement_count": 32,
+    "unit": "nats",
+    "version": "masked-policy-kl-v1"
+  },
+  "per_seed_final": {
+    "seed0": {
+      "elo": 1810.4143159747437,
+      "elo_uncertainty": 732.6802234518248,
+      "env_steps": 396930,
+      "self_play_games": 12816
+    },
+    "seed1": {
+      "elo": 1810.414343121488,
+      "elo_uncertainty": 732.6802696377457,
+      "env_steps": 388141,
+      "self_play_games": 12816
+    },
+    "seed2": {
+      "elo": 1373.5500895723048,
+      "elo_uncertainty": 251.498257056162,
+      "env_steps": 432754,
+      "self_play_games": 12816
+    },
+    "seed3": {
+      "elo": 1810.414322053478,
+      "elo_uncertainty": 732.6802337938375,
+      "env_steps": 429416,
+      "self_play_games": 12816
+    }
+  },
+  "run_type": "train",
+  "schema_version": 1,
+  "seed_count": 4,
+  "status": "interim_training_in_progress",
+  "total_env_steps": 1647241,
+  "total_self_play_games": 51264,
+  "training_complete": false
+}

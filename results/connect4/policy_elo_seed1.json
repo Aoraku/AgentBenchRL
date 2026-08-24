@@ -1,0 +1,426 @@
+{
+  "elo_protocol": {
+    "anchor_elo": 1000.0,
+    "anchor_policy": "lightzero_connect4_rulebot_v1",
+    "fit": "batch Bradley-Terry, draws score 0.5, L2=0.01",
+    "limitations": [
+      "five games per checkpoint per seed",
+      "learner is first player only",
+      "RuleBot is a heuristic stochastic opponent",
+      "training was still running at snapshot time"
+    ],
+    "opponent_action_selection": "stochastic fallback",
+    "opponent_identity": "static",
+    "uncertainty": "inverse observed Hessian, one standard deviation"
+  },
+  "elo_system": "agentbenchrl-anchored-bradley-terry-l2-0.01-v1",
+  "games_seen_accounting": {
+    "absolute_self_play_games_at_endpoint": 12816,
+    "absolute_self_play_games_at_first_policy": 1616,
+    "rounds": "incremental completed self-play games between measured policies"
+  },
+  "plot_contract": {
+    "information_gain_and_win_rate": "machine-readable metadata only",
+    "x_axis": "cumulative training self-play games_seen",
+    "y_axis": "Elo only"
+  },
+  "policy_sources": {
+    "seed1_iter010000": {
+      "checkpoint_sha256": "sha256:c30dbc672b878779052321c98e8b3d6cb9058a86be397b3c65d7da9d364bef89",
+      "env_steps": 38739,
+      "self_play_games": 1616,
+      "training_iteration": 10000
+    },
+    "seed1_iter020000": {
+      "checkpoint_sha256": "sha256:c6d1ba3867274c6032ae43005ccf2e8df500570c12fe39018ac43b4d3e2be4fd",
+      "env_steps": 83307,
+      "self_play_games": 3216,
+      "training_iteration": 20000
+    },
+    "seed1_iter030000": {
+      "checkpoint_sha256": "sha256:c0ec806fdb4a1efad27cfe0a2011c41afe42a653ae0a7a153753a64386d9b279",
+      "env_steps": 132910,
+      "self_play_games": 4816,
+      "training_iteration": 30000
+    },
+    "seed1_iter040000": {
+      "checkpoint_sha256": "sha256:9a4f1a94240964c245dd4405eefc7d2147136633d8662fb408d35783ab745e32",
+      "env_steps": 181016,
+      "self_play_games": 6416,
+      "training_iteration": 40000
+    },
+    "seed1_iter050000": {
+      "checkpoint_sha256": "sha256:dc154f2e7137e162213aeece6420fbad3c7554e1ae3c0433d387f7a4b67e2caa",
+      "env_steps": 231866,
+      "self_play_games": 8016,
+      "training_iteration": 50000
+    },
+    "seed1_iter060000": {
+      "checkpoint_sha256": "sha256:491742cff612821430ed96e72e769ff1c4960ed742211be956ba11cce3c3c710",
+      "env_steps": 286801,
+      "self_play_games": 9616,
+      "training_iteration": 60000
+    },
+    "seed1_iter070000": {
+      "checkpoint_sha256": "sha256:f860fb5e7cf2b49e47a7f64259647622bfaf228f9fd005904d45d3ae886c7649",
+      "env_steps": 337838,
+      "self_play_games": 11216,
+      "training_iteration": 70000
+    },
+    "seed1_iter080000": {
+      "checkpoint_sha256": "sha256:fff3428b67f6c3b4be411af55644d937483d0bf20fc3e76e42fcb90352c89651",
+      "env_steps": 388141,
+      "self_play_games": 12816,
+      "training_iteration": 80000
+    }
+  },
+  "rounds": [
+    {
+      "budget": {
+        "policy_cur_env_steps": 38739,
+        "policy_cur_self_play_games": 1616,
+        "policy_nxt_env_steps": 83307,
+        "policy_nxt_self_play_games": 3216,
+        "training_iteration": 20000
+      },
+      "elo": {
+        "seed1_iter010000": 1145.8043107065628,
+        "seed1_iter020000": 1145.8043107065628
+      },
+      "elo_uncertainty": {
+        "seed1_iter010000": 168.46418210237783,
+        "seed1_iter020000": 168.46418210237783
+      },
+      "games_seen": 1600,
+      "information_gain": {
+        "direction": "D_KL(policy_nxt || policy_cur)",
+        "max": 5.499427318572998,
+        "mean": 1.162764072418213,
+        "mean_entropy_cur": 0.8787614107131958,
+        "mean_entropy_nxt": 1.0393786430358887,
+        "mean_entropy_reduction": -0.16061723232269287,
+        "median": 0.8763687014579773,
+        "p95": 3.3893622636795033,
+        "probe_count": 512,
+        "unit": "nats",
+        "version": "masked-policy-kl-v1"
+      },
+      "policy_cur": "seed1_iter010000",
+      "policy_nxt": "seed1_iter020000",
+      "round": 1,
+      "win_rate": {
+        "agent_seat": "first_player_only",
+        "draws": 3,
+        "games": 5,
+        "losses": 0,
+        "mcts_simulations": 50,
+        "opponent": "LightZero Connect4RuleBot",
+        "score_rate": 0.7,
+        "version": "lightzero-online-rulebot-v1",
+        "wilson_95": [
+          0.2987857322245605,
+          0.9274176698746069
+        ],
+        "wins": 2
+      }
+    },
+    {
+      "budget": {
+        "policy_cur_env_steps": 83307,
+        "policy_cur_self_play_games": 3216,
+        "policy_nxt_env_steps": 132910,
+        "policy_nxt_self_play_games": 4816,
+        "training_iteration": 30000
+      },
+      "elo": {
+        "seed1_iter020000": 1145.8043107065628,
+        "seed1_iter030000": 1237.86579191131
+      },
+      "elo_uncertainty": {
+        "seed1_iter020000": 168.46418210237783,
+        "seed1_iter030000": 192.05268289848954
+      },
+      "games_seen": 1600,
+      "information_gain": {
+        "direction": "D_KL(policy_nxt || policy_cur)",
+        "max": 4.648316383361816,
+        "mean": 0.8859259486198425,
+        "mean_entropy_cur": 1.0393786430358887,
+        "mean_entropy_nxt": 1.160104513168335,
+        "mean_entropy_reduction": -0.12072582542896271,
+        "median": 0.682784914970398,
+        "p95": 2.3907796621322626,
+        "probe_count": 512,
+        "unit": "nats",
+        "version": "masked-policy-kl-v1"
+      },
+      "policy_cur": "seed1_iter020000",
+      "policy_nxt": "seed1_iter030000",
+      "round": 2,
+      "win_rate": {
+        "agent_seat": "first_player_only",
+        "draws": 2,
+        "games": 5,
+        "losses": 0,
+        "mcts_simulations": 50,
+        "opponent": "LightZero Connect4RuleBot",
+        "score_rate": 0.8,
+        "version": "lightzero-online-rulebot-v1",
+        "wilson_95": [
+          0.3755282641185388,
+          0.9637768390302125
+        ],
+        "wins": 3
+      }
+    },
+    {
+      "budget": {
+        "policy_cur_env_steps": 132910,
+        "policy_cur_self_play_games": 4816,
+        "policy_nxt_env_steps": 181016,
+        "policy_nxt_self_play_games": 6416,
+        "training_iteration": 40000
+      },
+      "elo": {
+        "seed1_iter030000": 1237.86579191131,
+        "seed1_iter040000": 1810.414343121488
+      },
+      "elo_uncertainty": {
+        "seed1_iter030000": 192.05268289848954,
+        "seed1_iter040000": 732.6802696377457
+      },
+      "games_seen": 1600,
+      "information_gain": {
+        "direction": "D_KL(policy_nxt || policy_cur)",
+        "max": 4.564472198486328,
+        "mean": 0.7090643048286438,
+        "mean_entropy_cur": 1.160104513168335,
+        "mean_entropy_nxt": 1.2163441181182861,
+        "mean_entropy_reduction": -0.05623971298336983,
+        "median": 0.537533164024353,
+        "p95": 2.0039285540580747,
+        "probe_count": 512,
+        "unit": "nats",
+        "version": "masked-policy-kl-v1"
+      },
+      "policy_cur": "seed1_iter030000",
+      "policy_nxt": "seed1_iter040000",
+      "round": 3,
+      "win_rate": {
+        "agent_seat": "first_player_only",
+        "draws": 0,
+        "games": 5,
+        "losses": 0,
+        "mcts_simulations": 50,
+        "opponent": "LightZero Connect4RuleBot",
+        "score_rate": 1.0,
+        "version": "lightzero-online-rulebot-v1",
+        "wilson_95": [
+          0.5655085052479191,
+          1.0
+        ],
+        "wins": 5
+      }
+    },
+    {
+      "budget": {
+        "policy_cur_env_steps": 181016,
+        "policy_cur_self_play_games": 6416,
+        "policy_nxt_env_steps": 231866,
+        "policy_nxt_self_play_games": 8016,
+        "training_iteration": 50000
+      },
+      "elo": {
+        "seed1_iter040000": 1810.414343121488,
+        "seed1_iter050000": 762.13420808869
+      },
+      "elo_uncertainty": {
+        "seed1_iter040000": 732.6802696377457,
+        "seed1_iter050000": 192.05268289848954
+      },
+      "games_seen": 1600,
+      "information_gain": {
+        "direction": "D_KL(policy_nxt || policy_cur)",
+        "max": 4.093581199645996,
+        "mean": 0.6355991363525391,
+        "mean_entropy_cur": 1.2163441181182861,
+        "mean_entropy_nxt": 1.258314609527588,
+        "mean_entropy_reduction": -0.041970495134592056,
+        "median": 0.4779144525527954,
+        "p95": 1.7682978451251983,
+        "probe_count": 512,
+        "unit": "nats",
+        "version": "masked-policy-kl-v1"
+      },
+      "policy_cur": "seed1_iter040000",
+      "policy_nxt": "seed1_iter050000",
+      "round": 4,
+      "win_rate": {
+        "agent_seat": "first_player_only",
+        "draws": 0,
+        "games": 5,
+        "losses": 4,
+        "mcts_simulations": 50,
+        "opponent": "LightZero Connect4RuleBot",
+        "score_rate": 0.2,
+        "version": "lightzero-online-rulebot-v1",
+        "wilson_95": [
+          0.03622316096978745,
+          0.6244717358814613
+        ],
+        "wins": 1
+      }
+    },
+    {
+      "budget": {
+        "policy_cur_env_steps": 231866,
+        "policy_cur_self_play_games": 8016,
+        "policy_nxt_env_steps": 286801,
+        "policy_nxt_self_play_games": 9616,
+        "training_iteration": 60000
+      },
+      "elo": {
+        "seed1_iter050000": 762.13420808869,
+        "seed1_iter060000": 1810.414343121488
+      },
+      "elo_uncertainty": {
+        "seed1_iter050000": 192.05268289848954,
+        "seed1_iter060000": 732.6802696377457
+      },
+      "games_seen": 1600,
+      "information_gain": {
+        "direction": "D_KL(policy_nxt || policy_cur)",
+        "max": 5.2322468757629395,
+        "mean": 0.5118706226348877,
+        "mean_entropy_cur": 1.258314609527588,
+        "mean_entropy_nxt": 1.3130402565002441,
+        "mean_entropy_reduction": -0.05472564697265625,
+        "median": 0.36299726366996765,
+        "p95": 1.4203706562519074,
+        "probe_count": 512,
+        "unit": "nats",
+        "version": "masked-policy-kl-v1"
+      },
+      "policy_cur": "seed1_iter050000",
+      "policy_nxt": "seed1_iter060000",
+      "round": 5,
+      "win_rate": {
+        "agent_seat": "first_player_only",
+        "draws": 0,
+        "games": 5,
+        "losses": 0,
+        "mcts_simulations": 50,
+        "opponent": "LightZero Connect4RuleBot",
+        "score_rate": 1.0,
+        "version": "lightzero-online-rulebot-v1",
+        "wilson_95": [
+          0.5655085052479191,
+          1.0
+        ],
+        "wins": 5
+      }
+    },
+    {
+      "budget": {
+        "policy_cur_env_steps": 286801,
+        "policy_cur_self_play_games": 9616,
+        "policy_nxt_env_steps": 337838,
+        "policy_nxt_self_play_games": 11216,
+        "training_iteration": 70000
+      },
+      "elo": {
+        "seed1_iter060000": 1810.414343121488,
+        "seed1_iter070000": 1000.0
+      },
+      "elo_uncertainty": {
+        "seed1_iter060000": 732.6802696377457,
+        "seed1_iter070000": 154.76011011890134
+      },
+      "games_seen": 1600,
+      "information_gain": {
+        "direction": "D_KL(policy_nxt || policy_cur)",
+        "max": 2.3897275924682617,
+        "mean": 0.45874497294425964,
+        "mean_entropy_cur": 1.3130402565002441,
+        "mean_entropy_nxt": 1.2683874368667603,
+        "mean_entropy_reduction": 0.04465286433696747,
+        "median": 0.34236401319503784,
+        "p95": 1.217491018772125,
+        "probe_count": 512,
+        "unit": "nats",
+        "version": "masked-policy-kl-v1"
+      },
+      "policy_cur": "seed1_iter060000",
+      "policy_nxt": "seed1_iter070000",
+      "round": 6,
+      "win_rate": {
+        "agent_seat": "first_player_only",
+        "draws": 3,
+        "games": 5,
+        "losses": 1,
+        "mcts_simulations": 50,
+        "opponent": "LightZero Connect4RuleBot",
+        "score_rate": 0.5,
+        "version": "lightzero-online-rulebot-v1",
+        "wilson_95": [
+          0.1704201558225681,
+          0.8295798441774319
+        ],
+        "wins": 1
+      }
+    },
+    {
+      "budget": {
+        "policy_cur_env_steps": 337838,
+        "policy_cur_self_play_games": 11216,
+        "policy_nxt_env_steps": 388141,
+        "policy_nxt_self_play_games": 12816,
+        "training_iteration": 80000
+      },
+      "elo": {
+        "seed1_iter070000": 1000.0,
+        "seed1_iter080000": 1810.414343121488
+      },
+      "elo_uncertainty": {
+        "seed1_iter070000": 154.76011011890134,
+        "seed1_iter080000": 732.6802696377457
+      },
+      "games_seen": 1600,
+      "information_gain": {
+        "direction": "D_KL(policy_nxt || policy_cur)",
+        "max": 3.2084243297576904,
+        "mean": 0.6024001836776733,
+        "mean_entropy_cur": 1.2683874368667603,
+        "mean_entropy_nxt": 1.3325512409210205,
+        "mean_entropy_reduction": -0.06416381150484085,
+        "median": 0.47778797149658203,
+        "p95": 1.7459865868091582,
+        "probe_count": 512,
+        "unit": "nats",
+        "version": "masked-policy-kl-v1"
+      },
+      "policy_cur": "seed1_iter070000",
+      "policy_nxt": "seed1_iter080000",
+      "round": 7,
+      "win_rate": {
+        "agent_seat": "first_player_only",
+        "draws": 0,
+        "games": 5,
+        "losses": 0,
+        "mcts_simulations": 50,
+        "opponent": "LightZero Connect4RuleBot",
+        "score_rate": 1.0,
+        "version": "lightzero-online-rulebot-v1",
+        "wilson_95": [
+          0.5655085052479191,
+          1.0
+        ],
+        "wins": 5
+      }
+    }
+  ],
+  "run_id": "connect4-lightzero-alphazero-seed1-iter080000",
+  "schema_version": 1,
+  "seed": 1,
+  "status": "interim_training_in_progress"
+}
